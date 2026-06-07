@@ -5,7 +5,7 @@ A GitHub template for new Qt 4.7 / QML 1.1 apps targeting **Symbian Belle**
 monitoring, and audio already wired, plus build/package/scaffold scripts — so
 you start from a running app, not an empty `main()`.
 
-The default app is named **BelleApp** and its landing screen is a **subsystem
+The default app is named **Xyz** and its landing screen is a **subsystem
 self-test**: TLS, SQLite round-trip, live RAM, and audio playback each report
 pass/fail. Run it first on a fresh device to confirm the platform layers work
 before you write any app code.
@@ -37,7 +37,7 @@ and `docs/DEVICE_NOTES.md` for hard-won device gotchas.
 
 | Path | What |
 |------|------|
-| `BelleApp.pro` | qmake project |
+| `Xyz.pro` | qmake project |
 | `src/` | C++ managers (Storage, Audio, Memory, Tls) + bootstrap |
 | `qml/` | QML UI: `AppWindow`, `SelfTestPage`, page-stack shell |
 | `scripts/` | build / package / inspect / init PowerShell scripts |
@@ -52,3 +52,4 @@ and `docs/DEVICE_NOTES.md` for hard-won device gotchas.
 
 ## License
 MIT — see `LICENSE`.
+

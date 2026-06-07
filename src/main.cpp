@@ -61,7 +61,7 @@ QString resolveLogPath()
         if (!dir.exists() && !dir.mkpath(QLatin1String("."))) {
             continue;
         }
-        return dir.filePath(QLatin1String("belleapp.log"));
+        return dir.filePath(QLatin1String("xyz.log"));
     }
 
     return QString();
@@ -364,6 +364,8 @@ void applyImportPaths(QDeclarativeEngine *engine)
 }
 
 // NAM that ignores SSL errors (needed on Symbian with outdated CA certs)
+// and injects the constant 小宇宙 spoof headers (QML XHR cannot set
+// User-Agent/Referer — see docs/API_NOTES.md).
 class SslIgnoringNam : public QNetworkAccessManager
 {
     Q_OBJECT
@@ -373,10 +375,41 @@ protected:
     QNetworkReply *createRequest(Operation op, const QNetworkRequest &request,
                                  QIODevice *outgoingData = 0)
     {
-        QNetworkReply *reply = QNetworkAccessManager::createRequest(op, request, outgoingData);
+        QNetworkRequest req(request);
+        applyXyzHeaders(req);
+        QNetworkReply *reply = QNetworkAccessManager::createRequest(op, req, outgoingData);
         connect(reply, SIGNAL(sslErrors(const QList<QSslError> &)),
                 reply, SLOT(ignoreSslErrors()));
         return reply;
+    }
+private:
+    static void applyXyzHeaders(QNetworkRequest &req)
+    {
+        const QString host = req.url().host().toLower();
+        if (host == QLatin1String("podcaster-api.xiaoyuzhoufm.com")) {
+            // Auth endpoints: web podcaster portal expects browser headers
+            req.setRawHeader("Accept", "application/json, text/plain, */*");
+            req.setRawHeader("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6");
+            req.setRawHeader("Origin", "https://podcaster.xiaoyuzhoufm.com");
+            req.setRawHeader("Referer", "https://podcaster.xiaoyuzhoufm.com/");
+            req.setRawHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                                           "AppleWebKit/537.36 (KHTML, like Gecko) "
+                                           "Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0");
+        } else if (host == QLatin1String("api.xiaoyuzhoufm.com")) {
+            // Mobile-app endpoints (content + token refresh): iOS app headers
+            req.setRawHeader("User-Agent", "Xiaoyuzhou/2.57.1 (build:1576; iOS 17.4.1)");
+            req.setRawHeader("Market", "AppStore");
+            req.setRawHeader("App-BuildNo", "1576");
+            req.setRawHeader("OS", "ios");
+            req.setRawHeader("Manufacturer", "Apple");
+            req.setRawHeader("BundleID", "app.podcast.cosmos");
+            req.setRawHeader("Model", "iPhone14,2");
+            req.setRawHeader("app-permissions", "4");
+            req.setRawHeader("App-Version", "2.57.1");
+            req.setRawHeader("WifiConnected", "true");
+            req.setRawHeader("OS-Version", "17.4.1");
+            req.setRawHeader("x-jike-device-id", "81ADBFD6-6921-482B-9AB9-A29E7CC7BB55");
+        }
     }
 };
 
@@ -395,7 +428,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     qInstallMsgHandler(messageOutput);
     LogPump logPump(&app);
-    qDebug("BelleApp starting...");
+    qDebug("Xyz starting...");
     flushLogQueue();
 
     ensureRuntimeLibraries();
@@ -409,7 +442,7 @@ int main(int argc, char *argv[])
 
     QDeclarativeView view;
     view.rootContext()->setContextProperty("storage", &storage);
-#ifdef BELLEAPP_DEBUG
+#ifdef XYZ_DEBUG
     view.rootContext()->setContextProperty("debugMode", QVariant(true));
 #else
     view.rootContext()->setContextProperty("debugMode", QVariant(false));
@@ -424,7 +457,7 @@ int main(int argc, char *argv[])
 
     view.setSource(QUrl("qrc:/qml/AppWindow.qml"));
     view.setResizeMode(QDeclarativeView::SizeRootObjectToView);
-    view.setWindowTitle(QObject::tr("BelleApp"));
+    view.setWindowTitle(QObject::tr("Xyz"));
     view.setMinimumSize(QSize(360, 640));
     view.setMaximumSize(QSize(480, 800));
     view.resize(360, 640);
@@ -434,3 +467,4 @@ int main(int argc, char *argv[])
 }
 
 #include "main.moc"
+

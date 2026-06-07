@@ -1,5 +1,5 @@
 TEMPLATE = app
-TARGET = BelleApp
+TARGET = Xyz
 VERSION = 0.1.0
 
 # Qt 4.x modules
@@ -11,7 +11,7 @@ symbian:LIBS += -lhal
 CONFIG -= debug_and_release
 CONFIG(debug, debug|release) {
     CONFIG += console
-    DEFINES += BELLEAPP_DEBUG
+    DEFINES += XYZ_DEBUG
 }
 
 # Place all build artifacts inside build directory
@@ -35,7 +35,7 @@ symbian {
 
     # Deploy an empty placeholder file to create the private directory
     emptyfile.sources = data/.placeholder
-    emptyfile.path = /private/e1000001
+    emptyfile.path = /private/e7654321
     DEPLOYMENT += emptyfile
 }
 
@@ -60,4 +60,11 @@ OTHER_FILES += \
     qml/AppWindow.qml \
     qml/SelfTestPage.qml \
     qml/MemoryBar.qml \
-    qml/BelleAppPageStackWindow.qml
+    qml/XyzPageStackWindow.qml \
+    qml/BelleHeader.qml \
+    qml/LoginPage.qml \
+    qml/VerifyCodePage.qml \
+    qml/HomePage.qml \
+    qml/js/Theme.js \
+    qml/js/Api.js
+

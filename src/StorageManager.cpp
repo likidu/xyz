@@ -13,7 +13,7 @@
 #include <QtSql/QSqlError>
 
 namespace {
-const char *const kConnectionName = "belleapp_db";
+const char *const kConnectionName = "xyz_db";
 }
 
 StorageManager::StorageManager(QObject *parent)
@@ -137,7 +137,7 @@ QString StorageManager::dbPath()
     base = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
     m_dbPathLog += QString::fromLatin1("DataLocation: %1\n").arg(base.isEmpty() ? QLatin1String("(empty)") : base);
     if (base.isEmpty()) {
-        base = QDir::homePath() + QLatin1String("/.belleapp");
+        base = QDir::homePath() + QLatin1String("/.xyz");
         m_dbPathLog += QString::fromLatin1("Using home fallback: %1\n").arg(base);
     }
 #endif
@@ -150,7 +150,7 @@ QString StorageManager::dbPath()
             m_dbPathLog += QString::fromLatin1("mkdir FAIL: %1\n").arg(base);
         }
     }
-    m_dbPath = QDir::toNativeSeparators(dir.filePath(QLatin1String("belleapp.db")));
+    m_dbPath = QDir::toNativeSeparators(dir.filePath(QLatin1String("xyz.db")));
     return m_dbPath;
 }
 
@@ -248,3 +248,4 @@ QString StorageManager::value(const QString &key, const QString &defaultValue) c
     }
     return defaultValue;
 }
+
