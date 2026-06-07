@@ -24,11 +24,7 @@ Page {
     }
 
     function signOut() {
-        storage.setValue("auth.accessToken", "");
-        storage.setValue("auth.refreshToken", "");
-        storage.setValue("auth.uid", "");
-        storage.setValue("auth.nickname", "");
-        storage.setValue("auth.phone", "");
+        auth.logout();
         signedOut();
     }
 

@@ -33,6 +33,11 @@ correctly at DONE. Validated end-to-end against a local mock returning 200 + tok
 headers; validated the error path against the real API (shows the server's `msg`,
 e.g. "无效参数").
 
+**Update (native migration):** auth was later moved off QML XHR into a native C++
+`AuthClient` (`src/AuthClient.{h,cpp}`) + vendored qjson, so this quirk no longer
+affects login — native `QNetworkReply` reads status cleanly from
+`HttpStatusCodeAttribute`. Kept here as reference for any future QML-side XHR use.
+
 ### Auth requests go through the QML engine NAM, so spoof headers live in C++
 QML XHR cannot set forbidden headers (`User-Agent`, `Referer`). They are injected
 host-keyed in `SslIgnoringNam::createRequest` (src/main.cpp). The real API accepting

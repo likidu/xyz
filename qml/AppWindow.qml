@@ -19,7 +19,7 @@ XyzPageStackWindow {
     function hideAbout() { aboutDialog.visible = false; }
 
     function isLoggedIn() {
-        return storage.value("auth.accessToken", "") !== "";
+        return auth.isLoggedIn();
     }
 
     ToolBarLayout {

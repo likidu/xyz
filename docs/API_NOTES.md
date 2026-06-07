@@ -11,9 +11,17 @@ Two distinct official hosts:
 | `https://podcaster-api.xiaoyuzhoufm.com` | Auth (send-code, login) | Browser spoof (web podcaster portal) |
 | `https://api.xiaoyuzhoufm.com` | Everything else + token refresh | iOS app spoof |
 
-Constant spoof headers are injected in C++ (`SslIgnoringNam::createRequest` in
-`src/main.cpp`, keyed on host) because QML XHR forbids setting `User-Agent`/`Referer`.
-QML (`qml/js/Api.js`) only sets `Content-Type` and per-request dynamic headers.
+Auth runs through a native C++ client, **`AuthClient`** (`src/AuthClient.{h,cpp}`), exposed
+to QML as the `auth` context property. It owns a `QNetworkAccessManager`, sets the browser-spoof
+headers itself, reads HTTP status from `HttpStatusCodeAttribute`, reads tokens from the response
+headers, parses the body with vendored **qjson** (`lib/qjson/`), and persists tokens/profile via
+`StorageManager`. The endpoint base is overridable via the `XYZ_AUTH_BASE` env var (used to point
+at a local mock for testing without sending SMS).
+
+The QML engine's `SslIgnoringNam` (`src/main.cpp`) now only ignores SSL errors for QML `Image`
+loads (cover art) over HTTPS — it no longer injects API headers (the native clients do that).
+The earlier QML-XHR auth (`qml/js/Api.js`) was removed in the native migration; the Qt 4.7
+QML-XHR status-0-on-error quirk it worked around no longer applies (see DEVICE_NOTES).
 
 ## Auth
 
@@ -108,6 +116,7 @@ exact official path before implementing a new one.
 
 ## Fallback
 
-If device TLS can't handshake with the official hosts (Symbian-era stack), point
-`AUTH_BASE` in `qml/js/Api.js` at a LAN-hosted ultrazg/xyz proxy — note its response shape
-wraps tokens into the JSON body instead of headers, so Api.js would need a small adjustment.
+If device TLS can't handshake with the official hosts (Symbian-era stack), set
+`XYZ_AUTH_BASE` to a LAN-hosted ultrazg/xyz proxy — note its response shape wraps tokens into
+the JSON body (`data.x-jike-access-token`) instead of the response headers, so `AuthClient`
+would need a small adjustment to read tokens from the body in that mode.

@@ -23,6 +23,10 @@ UI_DIR = $$OUT_PWD/ui
 
 INCLUDEPATH += src
 
+# Vendored qjson (Qt 4 has no QJsonDocument); compiled in statically.
+include($$PWD/lib/qjson/qjson.pri)
+DEFINES += QJSON_STATIC
+
 symbian {
     TARGET.EPOCHEAPSIZE = 0x020000 0x2000000
     # Required capabilities for network streaming + local storage
@@ -44,14 +48,16 @@ SOURCES += \
     src/MemoryMonitor.cpp \
     src/TlsChecker.cpp \
     src/StorageManager.cpp \
-    src/AudioEngine.cpp
+    src/AudioEngine.cpp \
+    src/AuthClient.cpp
 
 HEADERS += \
     src/MemoryMonitor.h \
     src/TlsChecker.h \
     src/AppConfig.h \
     src/StorageManager.h \
-    src/AudioEngine.h
+    src/AudioEngine.h \
+    src/AuthClient.h
 
 RESOURCES += \
     qml/qml.qrc
@@ -65,6 +71,5 @@ OTHER_FILES += \
     qml/LoginPage.qml \
     qml/VerifyCodePage.qml \
     qml/HomePage.qml \
-    qml/js/Theme.js \
-    qml/js/Api.js
+    qml/js/Theme.js
 

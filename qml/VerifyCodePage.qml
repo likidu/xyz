@@ -1,9 +1,9 @@
 import QtQuick 1.1
 import com.nokia.symbian 1.1
 import "js/Theme.js" as Theme
-import "js/Api.js" as Api
 
-// SMS code entry (design: screens-login.jsx LoginCode state).
+// SMS code entry (design: screens-login.jsx LoginCode state). Auth via the
+// native `auth` client.
 Page {
     id: page
     objectName: "VerifyCodePage"
@@ -11,8 +11,6 @@ Page {
     property bool hidesToolBar: true
     property string phone: ""
     property string areaCode: "+86"
-    property bool busy: false
-    property string errorText: ""
     property int resendSeconds: 60
     property int codeLength: 4
     property bool codeComplete: codeInput.text.length === codeLength
@@ -21,45 +19,35 @@ Page {
 
     function reset() {
         codeInput.text = "";
-        errorText = "";
-        busy = false;
         resendSeconds = 60;
     }
 
     function doLogin() {
-        if (busy || !codeComplete) {
+        if (auth.busy || !codeComplete) {
             return;
         }
-        busy = true;
-        errorText = "";
-        Api.login(phone, areaCode, codeInput.text, function (ok, msg, user, access, refresh) {
-            page.busy = false;
-            if (!ok) {
-                page.errorText = msg;
-                return;
-            }
-            storage.setValue("auth.accessToken", access);
-            storage.setValue("auth.refreshToken", refresh);
-            storage.setValue("auth.areaCode", page.areaCode);
-            storage.setValue("auth.phone", page.phone);
-            storage.setValue("auth.uid", user && user.uid ? user.uid : "");
-            storage.setValue("auth.nickname", user && user.nickname ? user.nickname : "");
-            page.loggedIn();
-        });
+        auth.login(phone, areaCode, codeInput.text);
     }
 
     function resendCode() {
-        if (busy || resendSeconds > 0) {
+        if (auth.busy || resendSeconds > 0) {
             return;
         }
-        errorText = "";
-        Api.sendCode(phone, areaCode, function (ok, msg) {
-            if (ok) {
-                page.resendSeconds = 60;
-            } else {
-                page.errorText = msg;
+        auth.sendCode(phone, areaCode);
+    }
+
+    Connections {
+        target: auth
+        onLoginSucceeded: {
+            if (page.status === PageStatus.Active) {
+                page.loggedIn();
             }
-        });
+        }
+        onSendCodeSucceeded: {
+            if (page.status === PageStatus.Active) {
+                page.resendSeconds = 60;
+            }
+        }
     }
 
     onStatusChanged: {
@@ -193,8 +181,8 @@ Page {
             anchors.right: parent.right
             height: Theme.buttonHeight
             radius: Theme.cornerRadius
-            gradient: page.codeComplete && !page.busy ? enabledGradient : disabledGradient
-            opacity: signInMouse.pressed && page.codeComplete && !page.busy ? 0.8 : 1.0
+            gradient: page.codeComplete && !auth.busy ? enabledGradient : disabledGradient
+            opacity: signInMouse.pressed && page.codeComplete && !auth.busy ? 0.8 : 1.0
 
             Gradient {
                 id: enabledGradient
@@ -209,10 +197,10 @@ Page {
 
             Text {
                 anchors.centerIn: parent
-                text: page.busy ? qsTr("Signing in...") : qsTr("Sign in")
+                text: auth.busy ? qsTr("Signing in...") : qsTr("Sign in")
                 font.pixelSize: 16
                 font.bold: true
-                color: page.codeComplete && !page.busy ? "#ffffff" : Theme.textFaint
+                color: page.codeComplete && !auth.busy ? "#ffffff" : Theme.textFaint
             }
 
             MouseArea {
@@ -227,8 +215,8 @@ Page {
             anchors.topMargin: 12
             anchors.left: parent.left
             anchors.right: parent.right
-            text: page.errorText
-            visible: page.errorText.length > 0
+            text: auth.errorMessage
+            visible: auth.errorMessage.length > 0
             font.pixelSize: 12
             color: Theme.errorColor
             wrapMode: Text.WordWrap

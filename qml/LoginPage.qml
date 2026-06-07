@@ -1,10 +1,9 @@
 import QtQuick 1.1
 import com.nokia.symbian 1.1
 import "js/Theme.js" as Theme
-import "js/Api.js" as Api
 
 // SMS login — phone entry + country picker overlay (design: screens-login.jsx
-// LoginPhone / LoginCountry states).
+// LoginPhone / LoginCountry states). Auth via the native `auth` client.
 Page {
     id: page
     objectName: "LoginPage"
@@ -12,10 +11,8 @@ Page {
     property bool hidesToolBar: true
     property string areaCode: "+86"
     property string regionAbbrev: "CN"
-    property bool busy: false
-    property string errorText: ""
     property bool pickerOpen: false
-    property bool submitEnabled: !busy && phoneInput.text.length >= 5
+    property bool submitEnabled: !auth.busy && phoneInput.text.length >= 5
 
     signal codeSent(string phone, string areaCode)
     signal exitRequested
@@ -24,24 +21,22 @@ Page {
         if (!submitEnabled) {
             return;
         }
-        busy = true;
-        errorText = "";
-        var phone = phoneInput.text;
-        var area = areaCode;
-        Api.sendCode(phone, area, function (ok, msg) {
-            page.busy = false;
-            if (ok) {
-                page.codeSent(phone, area);
-            } else {
-                page.errorText = msg;
-            }
-        });
+        auth.sendCode(phoneInput.text, areaCode);
     }
 
     function selectRegion(abbrev, code) {
         regionAbbrev = abbrev;
         areaCode = code;
         pickerOpen = false;
+    }
+
+    Connections {
+        target: auth
+        onSendCodeSucceeded: {
+            if (page.status === PageStatus.Active) {
+                page.codeSent(phoneInput.text, page.areaCode);
+            }
+        }
     }
 
     Rectangle {
@@ -247,7 +242,7 @@ Page {
 
             Text {
                 anchors.centerIn: parent
-                text: page.busy ? qsTr("Sending...") : qsTr("Get Code")
+                text: auth.busy ? qsTr("Sending...") : qsTr("Get Code")
                 font.pixelSize: 16
                 font.bold: true
                 color: page.submitEnabled ? "#ffffff" : Theme.textFaint
@@ -266,8 +261,8 @@ Page {
             anchors.topMargin: 12
             anchors.left: parent.left
             anchors.right: parent.right
-            text: page.errorText
-            visible: page.errorText.length > 0
+            text: auth.errorMessage
+            visible: auth.errorMessage.length > 0
             font.pixelSize: 12
             color: Theme.errorColor
             wrapMode: Text.WordWrap
