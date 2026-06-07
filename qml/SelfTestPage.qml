@@ -5,6 +5,7 @@ Page {
     id: page
     objectName: "SelfTestPage"
 
+    property bool hidesToolBar: false
     property string tlsState: "idle"
     property string tlsMsg: qsTr("not run")
     property string storageState: "idle"

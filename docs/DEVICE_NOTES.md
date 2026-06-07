@@ -3,6 +3,55 @@ Symbian Belle Device Notes
 
 Hardware: Nokia C7 (Belle FP2)
 
+## 2026-06-06 — SMS login API: TLS 1.2, QML XHR error quirk, qrc rebuilds (Simulator)
+
+Findings from wiring the SMS login flow to the official 小宇宙 API. Stage = Qt
+Simulator (desktop); device retest still pending, but these are mostly Qt-version /
+server-side facts that apply on-device too.
+
+### TLS 1.2 is mandatory for the auth host
+`podcaster-api.xiaoyuzhoufm.com` **rejects TLS 1.0** (curl `--tls-max 1.0` → connect
+fails / HTTP 000) and requires **TLS 1.2** (curl `--tlsv1.2` → HTTP 400 for a bad body,
+i.e. it talks). The Simulator's bundled OpenSSL is **1.0.2u** (TLS-1.2 capable), and
+Qt 4.7.4's `QSslSocket` negotiates TLS 1.2 fine through it — the in-app TLS self-test
+(`https://tls-v1-2.badssl.com:1012/`) passes (`supportsSsl: true`,
+"TLS 1.2 handshake and HTTP GET succeeded"). So no patched DLLs are needed in the
+Simulator. **On the C7, verify the device OpenSSL/QtNetwork can do TLS 1.2** before
+trusting the live flow; if not, fall back to a LAN-hosted ultrazg/xyz proxy
+(see docs/API_NOTES.md).
+
+### Qt 4.7 QML `XMLHttpRequest` zeroes `status` on HTTP errors
+For 4xx/5xx responses, `xhr.status` is correct at readyState 2/3 (HEADERS_RECEIVED,
+LOADING) but **resets to 0 at readyState 4 (DONE)**, and `responseText` is empty at
+DONE too. Observed via logging: server returned 400, states 2/3 showed `status=400`,
+state 4 showed `status=0 body=""`. This made every error look like a "Network error".
+**Fix:** in `qml/js/Api.js` capture the last non-zero `status` and last non-empty
+`responseText` across `onreadystatechange`, and use those in the callback. The 200
+success path is unaffected — `status`, `responseText`, and `getResponseHeader()`
+(used to read the `x-jike-access-token` / `x-jike-refresh-token` headers) all work
+correctly at DONE. Validated end-to-end against a local mock returning 200 + token
+headers; validated the error path against the real API (shows the server's `msg`,
+e.g. "无效参数").
+
+**Update (native migration):** auth was later moved off QML XHR into a native C++
+`AuthClient` (`src/AuthClient.{h,cpp}`) + vendored qjson, so this quirk no longer
+affects login — native `QNetworkReply` reads status cleanly from
+`HttpStatusCodeAttribute`. Kept here as reference for any future QML-side XHR use.
+
+### Auth requests go through the QML engine NAM, so spoof headers live in C++
+QML XHR cannot set forbidden headers (`User-Agent`, `Referer`). They are injected
+host-keyed in `SslIgnoringNam::createRequest` (src/main.cpp). The real API accepting
+our request (returning a normal 400, not a 403 bot-block) confirms the browser-spoof
+header set is accepted.
+
+### Build gotcha: editing only `.qml` does NOT rebuild the qrc
+The qmake-generated MinGW Makefile's `rcc` rule depends on `qml/qml.qrc` but **not** on
+the individual `.qml`/`.js` files it lists. So `mingw32-make` won't regenerate
+`qrc_qml.cpp` when you change a `.qml` without touching the `.qrc` — you get a fresh
+process running stale embedded QML. **Workaround:** delete
+`build-simulator/<cfg>/rcc/qrc_qml.cpp` + `obj/qrc_qml.o` before rebuilding (or
+`touch` the `.qrc`, or build `-Clean`).
+
 ## 2026-02-18 — Artwork Cache & Image Proxy
 
 ### Problem

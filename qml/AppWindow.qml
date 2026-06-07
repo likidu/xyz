@@ -1,10 +1,11 @@
 import QtQuick 1.1
 import com.nokia.symbian 1.1
 
-BelleAppPageStackWindow {
+XyzPageStackWindow {
     id: window
     showStatusBar: true
-    showToolBar: true
+    showToolBar: pageStack.currentPage ? !pageStack.currentPage.hidesToolBar : false
+    platformSoftwareInputPanelEnabled: true
 
     function handleBack() {
         if (pageStack.depth <= 1) {
@@ -16,6 +17,10 @@ BelleAppPageStackWindow {
 
     function showAbout() { aboutDialog.visible = true; }
     function hideAbout() { aboutDialog.visible = false; }
+
+    function isLoggedIn() {
+        return auth.isLoggedIn();
+    }
 
     ToolBarLayout {
         id: toolBarLayout
@@ -36,10 +41,47 @@ BelleAppPageStackWindow {
         visualParent: window
         MenuLayout {
             MenuItem {
+                text: qsTr("Self-test")
+                onClicked: { appMenu.close(); pageStack.push(selfTestPage); }
+            }
+            MenuItem {
                 text: qsTr("About")
                 onClicked: { appMenu.close(); window.showAbout(); }
             }
         }
+    }
+
+    LoginPage {
+        id: loginPage
+        onCodeSent: {
+            verifyCodePage.phone = phone;
+            verifyCodePage.areaCode = areaCode;
+            verifyCodePage.reset();
+            pageStack.push(verifyCodePage);
+        }
+        onExitRequested: Qt.quit()
+    }
+
+    VerifyCodePage {
+        id: verifyCodePage
+        onLoggedIn: {
+            pageStack.clear();
+            pageStack.push(homePage);
+        }
+    }
+
+    HomePage {
+        id: homePage
+        tools: toolBarLayout
+        onSignedOut: {
+            pageStack.clear();
+            pageStack.push(loginPage);
+        }
+    }
+
+    SelfTestPage {
+        id: selfTestPage
+        tools: toolBarLayout
     }
 
     Item {
@@ -71,7 +113,7 @@ BelleAppPageStackWindow {
 
                 Text {
                     width: parent.width
-                    text: qsTr("BelleApp")
+                    text: qsTr("Xyz")
                     font.pixelSize: 20
                     color: platformStyle.colorNormalLight
                     horizontalAlignment: Text.AlignHCenter
@@ -85,7 +127,7 @@ BelleAppPageStackWindow {
                 }
                 Text {
                     width: parent.width
-                    text: qsTr("Qt / Symbian Belle starter template.")
+                    text: qsTr("小宇宙 for Symbian Belle.")
                     font.pixelSize: 14
                     color: "#aeb9d4"
                     wrapMode: Text.WordWrap
@@ -104,9 +146,7 @@ BelleAppPageStackWindow {
         }
     }
 
-    initialPage: SelfTestPage {
-        tools: toolBarLayout
-    }
+    initialPage: isLoggedIn() ? homePage : loginPage
 
     Keys.onReleased: {
         if (event.key === Qt.Key_Escape) {

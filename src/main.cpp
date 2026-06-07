@@ -28,6 +28,7 @@
 #include "StorageManager.h"
 #include "TlsChecker.h"
 #include "AudioEngine.h"
+#include "AuthClient.h"
 
 namespace {
 QTextStream &infoStream()
@@ -61,7 +62,7 @@ QString resolveLogPath()
         if (!dir.exists() && !dir.mkpath(QLatin1String("."))) {
             continue;
         }
-        return dir.filePath(QLatin1String("belleapp.log"));
+        return dir.filePath(QLatin1String("xyz.log"));
     }
 
     return QString();
@@ -363,7 +364,9 @@ void applyImportPaths(QDeclarativeEngine *engine)
 }
 }
 
-// NAM that ignores SSL errors (needed on Symbian with outdated CA certs)
+// NAM that ignores SSL errors (needed on Symbian with outdated CA certs).
+// Used by the QML engine for Image loads (cover art) over HTTPS; API calls go
+// through native clients (AuthClient) that set their own headers.
 class SslIgnoringNam : public QNetworkAccessManager
 {
     Q_OBJECT
@@ -395,7 +398,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     qInstallMsgHandler(messageOutput);
     LogPump logPump(&app);
-    qDebug("BelleApp starting...");
+    qDebug("Xyz starting...");
     flushLogQueue();
 
     ensureRuntimeLibraries();
@@ -406,10 +409,11 @@ int main(int argc, char *argv[])
     MemoryMonitor memoryMonitor;
     TlsChecker tlsChecker;
     AudioEngine audioEngine;
+    AuthClient authClient(&storage);
 
     QDeclarativeView view;
     view.rootContext()->setContextProperty("storage", &storage);
-#ifdef BELLEAPP_DEBUG
+#ifdef XYZ_DEBUG
     view.rootContext()->setContextProperty("debugMode", QVariant(true));
 #else
     view.rootContext()->setContextProperty("debugMode", QVariant(false));
@@ -418,13 +422,14 @@ int main(int argc, char *argv[])
     view.rootContext()->setContextProperty("memoryMonitor", &memoryMonitor);
     view.rootContext()->setContextProperty("tlsChecker", &tlsChecker);
     view.rootContext()->setContextProperty("audioEngine", &audioEngine);
+    view.rootContext()->setContextProperty("auth", &authClient);
     static SslIgnoringNamFactory namFactory;
     view.engine()->setNetworkAccessManagerFactory(&namFactory);
     applyImportPaths(view.engine());
 
     view.setSource(QUrl("qrc:/qml/AppWindow.qml"));
     view.setResizeMode(QDeclarativeView::SizeRootObjectToView);
-    view.setWindowTitle(QObject::tr("BelleApp"));
+    view.setWindowTitle(QObject::tr("Xyz"));
     view.setMinimumSize(QSize(360, 640));
     view.setMaximumSize(QSize(480, 800));
     view.resize(360, 640);
@@ -434,3 +439,4 @@ int main(int argc, char *argv[])
 }
 
 #include "main.moc"
+
