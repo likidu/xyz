@@ -254,7 +254,7 @@ Page {
                 }
 
                 Column {
-                    width: subsList.width - 24 - 52 - 12 - 28
+                    width: subsList.width - 24 - 52 - 12 - 30
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 5
 
