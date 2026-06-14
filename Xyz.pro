@@ -49,7 +49,8 @@ SOURCES += \
     src/TlsChecker.cpp \
     src/StorageManager.cpp \
     src/AudioEngine.cpp \
-    src/AuthClient.cpp
+    src/AuthClient.cpp \
+    src/XyzApiClient.cpp
 
 HEADERS += \
     src/MemoryMonitor.h \
@@ -57,7 +58,8 @@ HEADERS += \
     src/AppConfig.h \
     src/StorageManager.h \
     src/AudioEngine.h \
-    src/AuthClient.h
+    src/AuthClient.h \
+    src/XyzApiClient.h
 
 RESOURCES += \
     qml/qml.qrc
