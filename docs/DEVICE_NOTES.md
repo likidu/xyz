@@ -3,6 +3,29 @@ Symbian Belle Device Notes
 
 Hardware: Nokia C7 (Belle FP2)
 
+## 2026-06-14 — Virtual keyboard not opening for login text fields
+
+Symptom (Nokia X7, Belle): tapping the phone-number field on LoginPage did not raise
+the on-screen keyboard, so login couldn't proceed. Worked in the Qt Simulator (desktop
+input context), failed on device.
+
+Cause: both LoginPage `phoneInput` and VerifyCodePage `codeInput` are raw QtQuick 1.1
+`TextInput` elements. Per the QtQuick 1 docs, on Symbian the software input panel (VKB)
+opens on a *click that reaches the TextInput*, not merely on active focus (that's the
+non-Symbian behavior — hence it worked in the simulator). The code only called
+`forceActiveFocus()`:
+- LoginPage: an overlay `MouseArea` swallows the tap, so the click never reaches the
+  `TextInput`.
+- VerifyCodePage: `codeInput` is an invisible 1x1 (`opacity:0`) field that can't be
+  tapped at all.
+So focus moved but the panel never appeared.
+
+Fix: call `TextInput.openSoftwareInputPanel()` explicitly wherever we `forceActiveFocus()`
+(both pages' tap handlers, plus VerifyCodePage `onStatusChanged`). `closeSoftwareInputPanel()`
+is the counterpart if dismissal is ever needed.
+
+Status: pending on-device confirmation on the X7.
+
 ## 2026-06-13 — M2 content screens (remote images, content API)
 
 - Content API is `api.xiaoyuzhoufm.com` (iOS-app headers), separate from the auth host.

@@ -53,6 +53,9 @@ Page {
     onStatusChanged: {
         if (status === PageStatus.Active) {
             codeInput.forceActiveFocus();
+            // codeInput is an invisible 1x1 field that can't be tapped, and
+            // forceActiveFocus alone doesn't raise the Symbian VKB — open it explicitly.
+            codeInput.openSoftwareInputPanel();
         }
     }
 
@@ -154,7 +157,10 @@ Page {
 
         MouseArea {
             anchors.fill: boxes
-            onClicked: codeInput.forceActiveFocus()
+            onClicked: {
+                codeInput.forceActiveFocus();
+                codeInput.openSoftwareInputPanel();
+            }
         }
 
         Text {
