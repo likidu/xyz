@@ -134,15 +134,19 @@ Page {
                     width: parent.width
                     spacing: 12
 
-                    Image {
+                    Rectangle {
                         width: 64
                         height: 64
-                        fillMode: Image.PreserveAspectCrop
+                        color: "#1a1a22"
                         clip: true
-                        smooth: true
-                        sourceSize.width: 64
-                        sourceSize.height: 64
-                        source: modelData.coverUrl
+                        Image {
+                            anchors.fill: parent
+                            fillMode: Image.PreserveAspectCrop
+                            smooth: true
+                            sourceSize.width: 64
+                            sourceSize.height: 64
+                            source: modelData.coverUrl
+                        }
                     }
 
                     Column {
@@ -180,9 +184,19 @@ Page {
                     Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
                     Text { text: modelData.whenText; font.pixelSize: 11; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
                     Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: modelData.playCount + " " + qsTr("plays"); font.pixelSize: 11; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
+                    Row {
+                        spacing: 4
+                        anchors.verticalCenter: parent.verticalCenter
+                        Image { source: "gfx/tab-headphones.svg"; width: 13; height: 13; smooth: true; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: modelData.playCount; font.pixelSize: 11; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
+                    }
                     Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: modelData.commentCount + " " + qsTr("comments"); font.pixelSize: 11; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
+                    Row {
+                        spacing: 4
+                        anchors.verticalCenter: parent.verticalCenter
+                        Image { source: "gfx/icon-comment.svg"; width: 13; height: 13; smooth: true; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: modelData.commentCount; font.pixelSize: 11; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
+                    }
                 }
 
                 // action row (placeholders — player deferred; controls inert)

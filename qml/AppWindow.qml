@@ -24,11 +24,11 @@ XyzPageStackWindow {
 
     function handleTab(index) {
         if (index === 2) {
-            if (pageStack.currentPage !== updatesPage) {
-                pageStack.pop(updatesPage);
+            while (pageStack.currentPage !== updatesPage && pageStack.depth > 1) {
+                pageStack.pop();
             }
         } else if (index === 3) {
-            if (pageStack.currentPage !== homePage) {
+            if (!pageStack.busy && pageStack.currentPage !== homePage) {
                 pageStack.push(homePage);
             }
         }
@@ -87,6 +87,7 @@ XyzPageStackWindow {
     VerifyCodePage {
         id: verifyCodePage
         onLoggedIn: {
+            updatesPage.loadedOnce = false;
             pageStack.clear();
             pageStack.push(updatesPage);
         }
