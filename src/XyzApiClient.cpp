@@ -92,6 +92,9 @@ void XyzApiClient::applyContentHeaders(QNetworkRequest &request)
     request.setRawHeader("Manufacturer", "Apple");
     request.setRawHeader("BundleID", "app.podcast.cosmos");
     request.setRawHeader("Model", "iPhone14,2");
+    // Required for routing: the jike gateway returns {"code":1,"message":"rpc_error"}
+    // (HTTP 400) without it. Fixed UUID, same as the ultrazg/xyz Go proxy.
+    request.setRawHeader("x-jike-device-id", "81ADBFD6-6921-482B-9AB9-A29E7CC7BB55");
     request.setRawHeader("app-permissions", "4");
     request.setRawHeader("Accept", "*/*");
     request.setRawHeader("Content-Type", "application/json");
@@ -207,9 +210,11 @@ void XyzApiClient::onReplyFinished()
         setBusy(false);
         return;
     }
+    // Both inbox/list and subscription/list return the array directly under the
+    // top-level "data" key ({"data":[...]}), alongside extras like userStats /
+    // loadMoreKey. (The earlier double-nested data.data shape was a mock artifact.)
     const QVariantMap top = root.toMap();
-    const QVariantMap data = top.value(QString::fromLatin1("data")).toMap();
-    const QVariantList rawItems = data.value(QString::fromLatin1("data")).toList();
+    const QVariantList rawItems = top.value(QString::fromLatin1("data")).toList();
 
     if (type == InboxRequest) {
         QVariantList shaped;

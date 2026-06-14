@@ -7,7 +7,7 @@ $listener.Start()
 Write-Host "mock-content on http://localhost:8099 (Ctrl+C to stop)"
 
 $img = "https://picsum.photos/seed/xyz/120"
-$inbox = @{ code=200; msg="OK"; data=@{ data=@(
+$inbox = @{ code=200; msg="OK"; data=@(
   @{ type="EPISODE"; eid="e1"; title="Summit: The Weekly Orbit 6.6";
      description="Hosts: Luma / Vega / Pico / Radish. Headlines: State of Play drops a wave of new titles.";
      duration=7800; pubDate="2026-06-13T09:00:00.000Z"; playCount=143; commentCount=1;
@@ -16,9 +16,9 @@ $inbox = @{ code=200; msg="OK"; data=@{ data=@(
      description="Did the poets really turn away from the cold light of dusk? This episode makes the case.";
      duration=6900; pubDate="2026-06-12T18:00:00.000Z"; playCount=7941; commentCount=120;
      image=@{ thumbnailUrl=$img; smallPicUrl=$img } }
-) } } | ConvertTo-Json -Depth 8
+) } | ConvertTo-Json -Depth 8
 
-$subs = @{ code=200; msg="OK"; data=@{ data=@(
+$subs = @{ code=200; msg="OK"; data=@(
   @{ type="PODCAST"; pid="p1"; title="Cosmic Drift"; subscriptionOftenPlayed=$true;
      latestEpisodePubDate="2026-06-11T10:00:00.000Z"; image=@{ smallPicUrl=$img; thumbnailUrl=$img };
      podcasters=@(@{ nickname="Luma"; avatar=@{ picture=@{ smallPicUrl=$img; thumbnailUrl=$img } } },
@@ -26,7 +26,7 @@ $subs = @{ code=200; msg="OK"; data=@{ data=@(
   @{ type="PODCAST"; pid="p2"; title="Code & Coffee";
      latestEpisodePubDate="2026-06-12T22:00:00.000Z"; image=@{ smallPicUrl=$img; thumbnailUrl=$img };
      podcasters=@(@{ nickname="Sol"; avatar=@{ picture=@{ smallPicUrl=$img; thumbnailUrl=$img } } }) }
-) } } | ConvertTo-Json -Depth 8
+) } | ConvertTo-Json -Depth 8
 
 while ($listener.IsListening) {
   $ctx = $listener.GetContext()
