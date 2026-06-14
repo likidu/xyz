@@ -88,6 +88,7 @@ XyzPageStackWindow {
         id: verifyCodePage
         onLoggedIn: {
             updatesPage.loadedOnce = false;
+            subscriptionsPage.loadedOnce = false;
             pageStack.clear();
             pageStack.push(updatesPage);
         }
@@ -104,7 +105,12 @@ XyzPageStackWindow {
 
     UpdatesPage {
         id: updatesPage
-        onMySubsRequested: { /* wired to SubscriptionsPage in Task 6 */ }
+        onMySubsRequested: pageStack.push(subscriptionsPage)
+        onTabSelected: window.handleTab(index)
+    }
+
+    SubscriptionsPage {
+        id: subscriptionsPage
         onTabSelected: window.handleTab(index)
     }
 

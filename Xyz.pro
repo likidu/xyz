@@ -75,5 +75,6 @@ OTHER_FILES += \
     qml/VerifyCodePage.qml \
     qml/HomePage.qml \
     qml/UpdatesPage.qml \
+    qml/SubscriptionsPage.qml \
     qml/js/Theme.js
 
