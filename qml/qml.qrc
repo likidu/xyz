@@ -9,6 +9,7 @@
         <file>LoginPage.qml</file>
         <file>VerifyCodePage.qml</file>
         <file>HomePage.qml</file>
+        <file>UpdatesPage.qml</file>
         <file>js/Theme.js</file>
         <file>gfx/icon-link.svg</file>
         <file>gfx/icon-x.svg</file>
