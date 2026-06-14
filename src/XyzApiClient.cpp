@@ -202,12 +202,14 @@ void XyzApiClient::onReplyFinished()
     QJson::Parser parser;
     bool ok = false;
     const QVariant root = parser.parse(payload, &ok);
-    QVariantList rawItems;
-    if (ok) {
-        const QVariantMap top = root.toMap();
-        const QVariantMap data = top.value(QString::fromLatin1("data")).toMap();
-        rawItems = data.value(QString::fromLatin1("data")).toList();
+    if (!ok) {
+        setErrorMessage(QString::fromLatin1("Failed to parse response."));
+        setBusy(false);
+        return;
     }
+    const QVariantMap top = root.toMap();
+    const QVariantMap data = top.value(QString::fromLatin1("data")).toMap();
+    const QVariantList rawItems = data.value(QString::fromLatin1("data")).toList();
 
     if (type == InboxRequest) {
         QVariantList shaped;
