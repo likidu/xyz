@@ -18,7 +18,6 @@ Page {
         if (page.loadedOnce) {
             return;
         }
-        page.loadedOnce = true;
         xyzApi.fetchSubscriptions();
     }
 
@@ -30,6 +29,13 @@ Page {
         if (status === PageStatus.Active) {
             page.load();
         }
+    }
+
+    // Mark loaded only on success, so an aborted/failed fetch retries on the next
+    // activation instead of stranding an empty list.
+    Connections {
+        target: xyzApi
+        onSubscriptionsLoaded: page.loadedOnce = true
     }
 
     Rectangle { anchors.fill: parent; color: Theme.bg }

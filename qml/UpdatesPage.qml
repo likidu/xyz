@@ -18,7 +18,6 @@ Page {
         if (page.loadedOnce) {
             return;
         }
-        page.loadedOnce = true;
         xyzApi.fetchInbox();
     }
 
@@ -26,6 +25,14 @@ Page {
         if (status === PageStatus.Active) {
             page.load();
         }
+    }
+
+    // Mark loaded only on success, so an aborted/failed fetch (e.g. the user
+    // taps My Subscriptions mid-load, which cancels the in-flight reply) retries
+    // on the next activation instead of stranding an empty feed.
+    Connections {
+        target: xyzApi
+        onInboxLoaded: page.loadedOnce = true
     }
 
     Rectangle { anchors.fill: parent; color: Theme.bg }
