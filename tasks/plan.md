@@ -103,3 +103,63 @@ content layer.
 
 Live login with a real registered number was confirmed working on the JS version before the
 migration; the native path uses the same endpoints/headers and is behavior-identical.
+
+---
+
+## M2 — Updates + Subscriptions (native content client)
+
+Full plan in `docs/superpowers/plans/2026-06-13-updates-subscriptions.md`.
+Implemented on branch `feat/updates-subscriptions`.
+
+### Context
+
+Post-login landing redesigned from `HomePage` to a native Updates feed + Subscriptions
+screen backed by a new `XyzApiClient` that calls `api.xiaoyuzhoufm.com` directly with
+iOS-app spoof headers and the stored `x-jike-access-token`.
+
+### Checklist
+
+- [x] `src/XyzApiClient.{h,cpp}` — `xyzApi` context property; `fetchInbox()` /
+      `fetchSubscriptions()`; iOS-app spoof headers; `shapeInboxItem` /
+      `shapeSubscription` (relative-time strings, 99+ cap); 401 → `sessionExpired`;
+      `XYZ_API_BASE` env override; 15s timeout; single in-flight reply; qjson parse
+- [x] `Xyz.pro` + `src/main.cpp` — register `XyzApiClient`, set `xyzApi` context property
+- [x] Placeholder glyph SVGs (`qml/gfx/tab-*.svg`, `icon-{play,queue,comment,dots,list,grid}.svg`)
+- [x] `qml/BelleTabBar.qml` — 56px dark-glossy, 4 placeholder tabs, active accent dot + grab handle
+- [x] `qml/js/Theme.js` — added `tabBarHeight = 56`
+- [x] `qml/BelleHeader.qml` — optional `actionIconSource`/`actionOn`/`actionClicked` trailing button
+- [x] `qml/UpdatesPage.qml` — glossy 56px title bar + "My Subscriptions" pill; episode cards
+      (64px cover, 2-line title/desc, meta row, action row + play circle); busy/error/empty states
+- [x] `qml/SubscriptionsPage.qml` — `BelleHeader` w/ toggle; 3-col `GridView` ("Often" badge);
+      `ListView` (search bar, Starred empty-state, 72px rows w/ avatar stack); busy/error/empty states
+- [x] `qml/AppWindow.qml` — login → Updates; `handleTab`; `SubscriptionsPage` instance;
+      `mySubsRequested` → push Subscriptions; session-expiry `Connections`; `initialPage` by token
+- [x] `scripts/mock-content.ps1` — local mock for deterministic simulator testing (no SMS)
+- [x] `qml/qml.qrc` + `Xyz.pro` — all new QML + SVGs registered
+- [x] Simulator: full flow verified against mock (visual + navigation)
+- [x] `docs/API_NOTES.md`, `docs/DESIGN_SYSTEM.md`, `docs/DEVICE_NOTES.md`, `docs/PLAN.md`,
+      `tasks/plan.md` — M2 documentation
+
+### Results
+
+Delivered the Updates feed and Subscriptions screen (grid + list) wired to native
+`XyzApiClient` calling `api.xiaoyuzhoufm.com` directly.
+
+Verified in the Qt Simulator (Nokia N8 frame) against `scripts/mock-content.ps1`
+(`XYZ_API_BASE=http://localhost:8099`), token seeded into the sim DB:
+- **Updates**: 2 episode cards with covers, 2-line title/desc, meta row (duration · when ·
+  plays · comments with 99+ cap), action row + play circle, "My Subscriptions" pill, tab bar.
+- **Subscriptions grid**: 3-col cover wall, "Often" badge on first item.
+- **Subscriptions list**: search placeholder, Starred empty-state, "All Subscriptions" rows
+  with avatar stacks (rounded-square 19px), hosts · when.
+- **Navigation**: Updates → My Subscriptions → grid → toggle → list → back → Updates →
+  person tab → Account; all transitions correct.
+- Remote HTTPS covers/avatars load via `SslIgnoringNamFactory`; app log clean (no QML errors).
+
+Platform findings recorded in `docs/DEVICE_NOTES.md` (2026-06-13): screenshot-capture
+gotcha in Qt Simulator non-interactive shell (use `PrintWindow` on the `Qt Simulator`
+window class, call `SetProcessDPIAware()` first).
+
+### Non-goals (deferred)
+Player / mini-player, pagination (`loadMoreKey`), search / sort / star actions, starred
+fetch from API, Discover / Search tabs (inert placeholders), token refresh.

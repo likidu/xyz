@@ -3,6 +3,51 @@ Symbian Belle Device Notes
 
 Hardware: Nokia C7 (Belle FP2)
 
+## 2026-06-13 — M2 content screens (remote images, content API)
+
+- Content API is `api.xiaoyuzhoufm.com` (iOS-app headers), separate from the auth host.
+  `XyzApiClient` reuses the AuthClient pattern (single in-flight reply, qjson, ignore SSL).
+- Remote cover/avatar `Image`s load through the QML engine's `SslIgnoringNamFactory`
+  (stale CA tolerated). Memory bounded via `sourceSize` caps + ListView/GridView lazy
+  delegates — watch `memoryMonitor` on-device with 20+ covers.
+- QML 1.1 limits: no circular Image clipping (avatars are rounded squares); avatar stack
+  uses positive spacing (no negative-margin overlap). Date/number formatting done in C++
+  (`shapeInboxItem`/`shapeSubscription`), not QML bindings.
+- Reminder: editing only `.qml`/`.qrc`/svgs does not retrigger rcc — delete
+  `build-simulator/debug/rcc/qrc_qml.cpp` + `obj/qrc_qml.o` before rebuilding.
+
+### Simulator visual verification (mock, 2026-06-13)
+
+Visual verification PASSED in the Qt Simulator (Nokia N8 frame) against the local mock
+(`scripts/mock-content.ps1`, `XYZ_API_BASE=http://localhost:8099`) with a token seeded
+into the sim DB (`%LOCALAPPDATA%\Nokia\QtSimulator\data\xyz.db`, `kv` table) to boot
+straight to Updates without SMS.
+
+Confirmed working:
+- **Updates cards**: covers loaded, 2-line title/desc, meta row with inline icons,
+  commentCount "99+" cap, relative times ("21h ago" / "1d ago"), action row + play circle,
+  title bar + "My Subscriptions" pill, bottom tab bar.
+- **Subscriptions grid**: 3-col covers, "Often" badge, header toggle.
+- **Subscriptions list**: search placeholder, Starred empty-state, "All Subscriptions"
+  rows with avatar stacks, hosts · when.
+- **Navigation**: Updates → My Subscriptions → grid → toggle → list all worked.
+- Remote cover/avatar images (HTTPS) load through `SslIgnoringNamFactory` as expected.
+- App log (`C:/Data/Xyz/logs/xyz.log`): clean, no QML binding errors.
+
+### Screenshot-capture gotcha (Qt Simulator, non-interactive shell)
+
+The app is built console-subsystem AND its GUI renders inside the **Qt Simulator** host
+window (window class `QWidget`, title `Qt Simulator`), NOT under the launched `Xyz.exe`
+PID — so `Process.MainWindowHandle` is 0 and per-PID window enumeration fails.
+
+To capture a screenshot:
+1. Enumerate top-level windows by class/title (`Qt Simulator`).
+2. Call `SetProcessDPIAware()` first — without it, the capture is cropped.
+3. Use `PrintWindow(hwnd, hdc, 2)`.
+
+GUI windows are also not visible to a non-interactive shell session; offscreen QML still
+renders and logs binding errors to `C:/Data/Xyz/logs/xyz.log`.
+
 ## 2026-06-06 — SMS login API: TLS 1.2, QML XHR error quirk, qrc rebuilds (Simulator)
 
 Findings from wiring the SMS login flow to the official 小宇宙 API. Stage = Qt

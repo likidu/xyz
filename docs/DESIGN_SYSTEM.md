@@ -82,9 +82,29 @@ dialog title 15 w700, option row 15, option code 14.
 - Remember: no block expressions in bindings, functions only at Page root, no negative
   anchor margins.
 
+## M2 screens (implemented)
+
+**Bottom tab bar** (`BelleTabBar.qml`, 56px): dark glossy gradient (`#2a2a30 → #1d1d22 →
+#141417`), 1px black top border, 4-tab Belle grab handle, 4 placeholder glyph tabs
+(compass/search/headphones/person), active tab at full opacity + 5px accent dot (`accentBright`)
+at bottom centre. Placeholder icons pending real assets; tab indices 0/1 (Discover/Search)
+are inert for now.
+
+**Updates page** (`UpdatesPage.qml`): custom 56px title bar (24px/800 "Updates" left,
+"My Subscriptions" pill right — `accentBright` tinted border + headphones icon). Episode
+card: 64px cover (`sourceSize` capped) + 2-line title (15px/bold) + 2-line desc (12px/dim)
++ meta row (duration · when · plays · comments, 11px/faint, dot separators) + action row
+(queue/comment+count/dots left, 48px play circle right). commentCount capped at "99+".
+
+**Subscriptions page** (`SubscriptionsPage.qml`): `BelleHeader` with trailing toggle
+action (grid↔list icons). Grid: 3-column `GridView`, `cellWidth = floor(width/3)`, 120px
+`sourceSize`, "Often" badge (10px/accentBright, semi-transparent accent-tinted background).
+List: search bar (42px, `hairline` border), "Starred" section + empty-state card, "All
+Subscriptions" subhead, 72px rows (52px cover + name/hosts·when with avatar stack of up
+to 2 rounded-square 19px avatars + dots). Toggle uses `BelleHeader.actionIconSource`.
+
 ## Other screens (recorded for later milestones)
 
 belle.css also specs: native two-line list rows (70px min, pressed state = violet gradient
 + 3px left bar), card feed, episode detail w/ comments, player (208px art, scrubber,
-72px play button), glossy icon-only toolbar w/ "expand options" handle. Pull metrics from
-the bundle when those screens are built.
+72px play button). Pull metrics from the bundle when those screens are built.

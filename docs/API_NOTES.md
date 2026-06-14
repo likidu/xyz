@@ -120,3 +120,23 @@ If device TLS can't handshake with the official hosts (Symbian-era stack), set
 `XYZ_AUTH_BASE` to a LAN-hosted ultrazg/xyz proxy — note its response shape wraps tokens into
 the JSON body (`data.x-jike-access-token`) instead of the response headers, so `AuthClient`
 would need a small adjustment to read tokens from the body in that mode.
+
+## Content endpoints (M2)
+
+Direct to `https://api.xiaoyuzhoufm.com`, POST + JSON, with **iOS-app spoof headers**
+(different from the auth host's browser headers): `User-Agent: Xiaoyuzhou/2.57.1
+(build:1576; iOS 17.4.1)`, `OS: ios`, `BundleID: app.podcast.cosmos`, `App-Version: 2.57.1`,
+`App-BuildNo: 1576`, `Model: iPhone14,2`, `Manufacturer: Apple`, `app-permissions: 4`,
+`Accept: */*`, `Accept-Language: zh-Hans-CN;q=1.0, zh-Hant-TW;q=0.9`, `Timezone: Asia/Shanghai`,
+`Local-Time: <ISO8601>`, and `x-jike-access-token: <stored token>`.
+
+| Action | Endpoint | Body |
+|---|---|---|
+| Updates feed | `POST /v1/inbox/list` | `{"limit":"20"}` (+ `loadMoreKey:{pubDate,id}` for paging — deferred) |
+| Subscriptions | `POST /v1/subscription/list` | `{"limit":"20","sortOrder":"desc","sortBy":"subscribedAt"}` |
+
+- Tokens are read from `StorageManager` (`auth.accessToken`). HTTP **401** → `sessionExpired`
+  → re-login (refresh-token flow still deferred).
+- `XYZ_API_BASE` env var overrides the host for testing; it expects **official-shaped**
+  endpoints (e.g. `scripts/mock-content.ps1`), NOT the ultrazg proxy whose routes/bodies differ.
+- Implemented natively in `src/XyzApiClient.{h,cpp}` (`xyzApi` context property).
