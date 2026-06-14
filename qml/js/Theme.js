@@ -23,3 +23,4 @@ var fieldHeight = 50;
 var buttonHeight = 50;
 var cornerRadius = 7;
 var pagePadding = 22;
+var tabBarHeight = 56;

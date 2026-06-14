@@ -5,6 +5,7 @@
         <file>MemoryBar.qml</file>
         <file>XyzPageStackWindow.qml</file>
         <file>BelleHeader.qml</file>
+        <file>BelleTabBar.qml</file>
         <file>LoginPage.qml</file>
         <file>VerifyCodePage.qml</file>
         <file>HomePage.qml</file>

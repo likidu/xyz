@@ -70,6 +70,7 @@ OTHER_FILES += \
     qml/MemoryBar.qml \
     qml/XyzPageStackWindow.qml \
     qml/BelleHeader.qml \
+    qml/BelleTabBar.qml \
     qml/LoginPage.qml \
     qml/VerifyCodePage.qml \
     qml/HomePage.qml \
