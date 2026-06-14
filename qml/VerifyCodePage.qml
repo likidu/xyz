@@ -40,6 +40,7 @@ Page {
         target: auth
         onLoginSucceeded: {
             if (page.status === PageStatus.Active) {
+                codeInput.closeSoftwareInputPanel();
                 page.loggedIn();
             }
         }
@@ -56,6 +57,11 @@ Page {
             // codeInput is an invisible 1x1 field that can't be tapped, and
             // forceActiveFocus alone doesn't raise the Symbian VKB — open it explicitly.
             codeInput.openSoftwareInputPanel();
+        } else if (status === PageStatus.Deactivating) {
+            // Dismiss the keyboard on the way out. Otherwise inputContext.visible stays
+            // true and XyzPageStackWindow's `sip` spacer keeps reserving the keyboard
+            // height, leaving the next page shrunk (black gap under the tab bar).
+            codeInput.closeSoftwareInputPanel();
         }
     }
 

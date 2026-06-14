@@ -21,10 +21,19 @@ non-Symbian behavior — hence it worked in the simulator). The code only called
 So focus moved but the panel never appeared.
 
 Fix: call `TextInput.openSoftwareInputPanel()` explicitly wherever we `forceActiveFocus()`
-(both pages' tap handlers, plus VerifyCodePage `onStatusChanged`). `closeSoftwareInputPanel()`
-is the counterpart if dismissal is ever needed.
+(both pages' tap handlers, plus VerifyCodePage `onStatusChanged`).
 
-Status: pending on-device confirmation on the X7.
+Follow-up (same day, X7): the VKB now opens — but opening it on the verify page left the
+*next* page (Updates / My Subscriptions) shrunk, with a black gap under the bottom tab bar.
+Cause: `XyzPageStackWindow`'s `sip` spacer is sized to `inputContext.height` while
+`inputContext.visible` is true, and `contentArea` is anchored to `sip.top`. The panel was
+never dismissed, so after `pageStack.clear()`/`push` on login the SIP stayed "Visible" and
+kept reserving keyboard height. Fix: `codeInput.closeSoftwareInputPanel()` in VerifyCodePage
+`onStatusChanged` when `status === PageStatus.Deactivating`, so the SIP collapses before the
+next page activates. Lesson: every manual `openSoftwareInputPanel()` needs a matching
+`closeSoftwareInputPanel()` on page exit.
+
+Status: VKB opening confirmed on X7; shrunk-next-page fix pending re-test.
 
 ## 2026-06-13 — M2 content screens (remote images, content API)
 
