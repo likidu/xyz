@@ -26,12 +26,20 @@ before you write any app code.
 
 ## Build for a device
 
+One step — build, package, and self-sign into a `.sis`:
+```powershell
+pwsh scripts/build-sis.ps1 -Config Release -Arch armv5
+```
+Or run the two stages separately:
 ```powershell
 pwsh scripts/build-symbian.ps1   -Config Release -Arch armv5
 pwsh scripts/package-symbian.ps1 -Config Release -Arch armv5
 ```
-Produces a self-signed `.sis`. See `docs/SYMBIAN_PACKAGING.md` for install steps,
-and `docs/DEVICE_NOTES.md` for hard-won device gotchas.
+Either way you get a self-signed `build-symbian\<arch>-<config>\Xyz_selfsigned.sis`,
+ready to transfer to the device (e.g. over Bluetooth). Add `-Clean` after editing
+QML so rcc regenerates and the `.qml` changes are baked into the build. See
+`docs/SYMBIAN_PACKAGING.md` for install steps, and `docs/DEVICE_NOTES.md` for
+hard-won device gotchas.
 
 ## Layout
 
