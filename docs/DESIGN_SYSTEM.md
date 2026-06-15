@@ -123,8 +123,33 @@ name [16px] / hosts·when [13px] with avatar stack of up to 2 rounded-square 19p
 dots). Toggle uses `BelleHeader.actionIconSource`.
 (Sizes reflect the 2026-06-14 readability pass — see the type-scale principle above.)
 
+## M3 screen (implemented)
+
+**Episode page** (`EpisodePage.qml`, design `screens-detail.jsx` + `.ep-*`/`.cmt-*`): pushed
+from an Updates card tap (the cover+title area; the 48px play circle stays a separate target).
+`BelleHeader` (back, "Episode") over a `Flickable`:
+
+- **Hero** (`.ep-hero`): 104px square cover + show title (14px/`accentBright`) · episode title
+  (19px/bold, wraps) · duration·time sub (13px/`textDim`). Seeded from the tapped inbox item for
+  instant paint; the show title + notes fill from the fetched detail. **No episode-number field
+  exists in the API** — the mock's "EP.47"/"183." prefix is just part of the title string, so the
+  show line is only the podcast title.
+- **Play CTA** (`.ep-play`): 46px violet gradient (`accentBright`→`accentDeep`), white play glyph
+  + "Play". Inert placeholder — player is its own later milestone.
+- **Show notes** (`.ep-notes`): plain-text `description`, 15px/`textBody`, hairline divider below.
+  (HTML `shownotes` deferred.)
+- **Top Comments** (`.cmt-head` + `.cmt`): header (15px/`accentBright`) + count (episode
+  `commentCount`); rows of a 36px rounded avatar (initial fallback when no picture) + name·ipLoc
+  (13px/`textDim`) + text (15px/`text`) + a vertical ♥ like cluster (heart 18px + count, `textFaint`).
+- **No bottom toolbar** — the mockup's comment/add/share/list bar is omitted while its actions are
+  deferred with the player.
+
+Data: native `xyzApi.fetchEpisode(eid)` then `fetchComments(eid)`, sequenced (the client serves one
+request at a time). New assets: `gfx/icon-heart.svg`, `gfx/icon-play-white.svg`. Sizes follow the
+on-device type-scale above.
+
 ## Other screens (recorded for later milestones)
 
 belle.css also specs: native two-line list rows (70px min, pressed state = violet gradient
-+ 3px left bar), card feed, episode detail w/ comments, player (208px art, scrubber,
-72px play button). Pull metrics from the bundle when those screens are built.
++ 3px left bar), card feed, and the player (208px art, scrubber, 72px play button). Pull
+metrics from the bundle when those screens are built.

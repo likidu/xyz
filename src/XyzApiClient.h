@@ -21,6 +21,8 @@ class XyzApiClient : public QObject
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
     Q_PROPERTY(QVariantList inboxItems READ inboxItems NOTIFY inboxLoaded)
     Q_PROPERTY(QVariantList subscriptions READ subscriptions NOTIFY subscriptionsLoaded)
+    Q_PROPERTY(QVariantMap episode READ episode NOTIFY episodeLoaded)
+    Q_PROPERTY(QVariantList comments READ comments NOTIFY commentsLoaded)
 
 public:
     explicit XyzApiClient(StorageManager *storage, QObject *parent = 0);
@@ -29,15 +31,21 @@ public:
     QString errorMessage() const;
     QVariantList inboxItems() const;
     QVariantList subscriptions() const;
+    QVariantMap episode() const;
+    QVariantList comments() const;
 
     Q_INVOKABLE void fetchInbox();
     Q_INVOKABLE void fetchSubscriptions();
+    Q_INVOKABLE void fetchEpisode(const QString &eid);
+    Q_INVOKABLE void fetchComments(const QString &eid);
 
 signals:
     void busyChanged();
     void errorMessageChanged();
     void inboxLoaded();
     void subscriptionsLoaded();
+    void episodeLoaded();
+    void commentsLoaded();
     void sessionExpired();
 
 private slots:
@@ -46,9 +54,11 @@ private slots:
     void onSslErrors(const QList<QSslError> &errors);
 
 private:
-    enum RequestType { NoneRequest, InboxRequest, SubscriptionsRequest };
+    enum RequestType { NoneRequest, InboxRequest, SubscriptionsRequest,
+                       EpisodeRequest, CommentsRequest };
 
     void startPost(RequestType type, const QString &path, const QVariantMap &body);
+    void startGet(RequestType type, const QString &path);
     void abortActiveRequest();
     void applyContentHeaders(QNetworkRequest &request);
     void setBusy(bool busy);
@@ -56,6 +66,8 @@ private:
 
     QVariantMap shapeInboxItem(const QVariantMap &item) const;
     QVariantMap shapeSubscription(const QVariantMap &item) const;
+    QVariantMap shapeEpisode(const QVariantMap &item) const;
+    QVariantMap shapeComment(const QVariantMap &item) const;
     QString pickImageUrl(const QVariantMap &image) const;
     QString relativeTime(const QString &iso) const;
 
@@ -68,6 +80,8 @@ private:
     RequestType m_requestType;
     QVariantList m_inboxItems;
     QVariantList m_subscriptions;
+    QVariantMap m_episode;
+    QVariantList m_comments;
 };
 
 #endif // XYZAPICLIENT_H

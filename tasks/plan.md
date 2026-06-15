@@ -163,3 +163,58 @@ window class, call `SetProcessDPIAware()` first).
 ### Non-goals (deferred)
 Player / mini-player, pagination (`loadMoreKey`), search / sort / star actions, starred
 fetch from API, Discover / Search tabs (inert placeholders), token refresh.
+
+---
+
+## M3 — Episode detail page
+
+Design source: `xyz-for-symbian-belle` bundle — `screens-detail.jsx` + `.ep-*` / `.cmt-*`
+in `belle.css`. Reached by tapping an episode card in the Updates feed. Player deferred
+(Play CTA + actions inert, like the Updates action row).
+
+### Decisions (from brainstorming, 2026-06-14)
+- **Data**: live native fetch (user choice). Hero is *seeded* from the tapped inbox item
+  (instant paint), then episode detail + comments fetched by `eid` fill show name, notes,
+  comment count, and the comment list.
+- **Navigation**: tapping a card body in Updates opens the page.
+- **Bottom toolbar**: omitted for now (every action it held — comment/add/share/list — is
+  deferred with the player).
+
+### Real API contracts (ultrazg/xyz v1.10.0, source-verified)
+- Episode detail: `GET /v1/episode/get?eid=<eid>` (GET, query param — no body). Response
+  `{data:{episode}}`; fields `title`, `podcast.title`, `description` (plain), `duration`
+  (sec), `pubDate` (ISO), `playCount`, `commentCount`, `image.*`. **No episode-number
+  field** — "EP.47" is text only; show line = `podcast.title`.
+- Comments: `POST /v1/comment/list-primary`, body
+  `{"order":"HOT","owner":{"id":"<eid>","type":"EPISODE"}}`. Response `{data:[...],totalCount}`;
+  per comment `text`, `likeCount`, `author.nickname`, `author.avatar.picture.*`, `ipLoc`.
+- Both use the same `x-jike-access-token` header the existing content endpoints set.
+
+### Checklist
+- [ ] `src/XyzApiClient.{h,cpp}` — `fetchEpisode(eid)` (GET) / `fetchComments(eid)` (POST,
+      owner-wrapped); `episode`/`comments` props; `episodeLoaded`/`commentsLoaded`;
+      `shapeEpisode`/`shapeComment`; `startGet()`; `eid` added to `shapeInboxItem`
+- [x] `qml/gfx/icon-heart.svg`, `qml/gfx/icon-play-white.svg`
+- [x] `qml/EpisodePage.qml` — hero / Play CTA (inert) / notes / Top Comments + rows
+- [x] `qml/UpdatesPage.qml` — `episodeRequested(item)` + full-delegate tap MouseArea
+- [x] `qml/AppWindow.qml` — `EpisodePage` instance, seed + push + fetch, back = pop
+- [x] `scripts/mock-content.ps1` — `/v1/episode/get` + `/v1/comment/list-primary` branches
+- [x] `qml/qml.qrc` — register `EpisodePage.qml` + 2 SVGs
+- [x] `docs/DESIGN_SYSTEM.md`, `docs/API_NOTES.md`, `docs/PLAN.md` — M3
+- [x] Simulator build green + clean QML load; tap path verified via request-logging mock
+- [ ] On-device visual + live read against the real API (user-run)
+
+### Fix — tap target (post-review)
+Reported: couldn't tap an Updates card to open the Episode page on device. Root cause: the tap
+target covered only the cover+title (a nested wrapper `Item`), so taps on the description / meta /
+play-button area did nothing — on the small screen that reads as "the item isn't tappable." Fixed
+by replacing it with a single full-delegate `MouseArea` behind the (non-interactive) content
+(canonical Qt-Quick-1 pattern; the ListView still flicks) plus a Belle pressed-state highlight.
+Verified the tap path fires `episodeRequested → openWith → push → fetchEpisode → fetchComments`
+end-to-end via a request-logging mock (`/v1/inbox/list` → `/v1/episode/get` → `/v1/comment/list-primary`).
+On device, do a **clean rebuild** so the qrc re-embeds the updated `UpdatesPage.qml` (editing only
+a `.qml` can skip the rcc step).
+
+### Non-goals
+Player, full comment thread / replies, comment compose, like interaction, pagination,
+`shownotes` HTML rendering (plain `description` only).

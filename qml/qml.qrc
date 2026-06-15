@@ -11,6 +11,7 @@
         <file>HomePage.qml</file>
         <file>UpdatesPage.qml</file>
         <file>SubscriptionsPage.qml</file>
+        <file>EpisodePage.qml</file>
         <file>js/Theme.js</file>
         <file>gfx/icon-link.svg</file>
         <file>gfx/icon-x.svg</file>
@@ -22,8 +23,10 @@
         <file>gfx/tab-headphones.svg</file>
         <file>gfx/tab-person.svg</file>
         <file>gfx/icon-play.svg</file>
+        <file>gfx/icon-play-white.svg</file>
         <file>gfx/icon-queue.svg</file>
         <file>gfx/icon-comment.svg</file>
+        <file>gfx/icon-heart.svg</file>
         <file>gfx/icon-dots.svg</file>
         <file>gfx/icon-list.svg</file>
         <file>gfx/icon-grid.svg</file>

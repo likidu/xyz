@@ -107,11 +107,19 @@ XyzPageStackWindow {
         id: updatesPage
         onMySubsRequested: pageStack.push(subscriptionsPage)
         onTabSelected: window.handleTab(index)
+        onEpisodeRequested: {
+            episodePage.openWith(item);
+            pageStack.push(episodePage);
+        }
     }
 
     SubscriptionsPage {
         id: subscriptionsPage
         onTabSelected: window.handleTab(index)
+    }
+
+    EpisodePage {
+        id: episodePage
     }
 
     SelfTestPage {

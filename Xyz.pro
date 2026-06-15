@@ -81,5 +81,6 @@ OTHER_FILES += \
     qml/HomePage.qml \
     qml/UpdatesPage.qml \
     qml/SubscriptionsPage.qml \
+    qml/EpisodePage.qml \
     qml/js/Theme.js
 

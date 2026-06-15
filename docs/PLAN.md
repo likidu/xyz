@@ -34,6 +34,21 @@ API details in `docs/API_NOTES.md`.
 Non-goals (deferred): player/mini-player, pagination, search/sort/star actions,
 starred fetch, Discover/Search tabs, token refresh.
 
+## M3 — Episode detail page
+
+See `tasks/plan.md` for the detailed plan; design ref `screens-detail.jsx`,
+API details in `docs/API_NOTES.md`, component spec in `docs/DESIGN_SYSTEM.md`.
+- [x] Native `fetchEpisode`/`fetchComments` (`episode`/`comments` props, `episodeLoaded`/
+      `commentsLoaded`, `shapeEpisode`/`shapeComment`, GET `startGet`, `eid` on inbox items)
+- [x] `EpisodePage.qml` — hero (seeded from card) + inert Play CTA + show notes + top-comments preview
+- [x] Tap an Updates card → push EpisodePage; back = pop. No bottom toolbar (actions deferred)
+- [x] `gfx/icon-heart.svg` + `gfx/icon-play-white.svg`; mock `/v1/episode/get` + `/v1/comment/list-primary`
+- [x] Simulator: clean build + clean QML load (logged-in Updates render error-free; mock shapes verified)
+- [ ] Live read against the real API with a stored token (read-only; user-run)
+
+Non-goals (deferred): player, full comment thread/replies, comment compose, like interaction,
+pagination (`loadMoreKey`), HTML `shownotes` rendering.
+
 ## Device experiments
 See `docs/DEVICE_NOTES.md` (append-only log, dated entries).
 
