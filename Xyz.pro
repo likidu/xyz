@@ -28,6 +28,11 @@ include($$PWD/lib/qjson/qjson.pri)
 DEFINES += QJSON_STATIC
 
 symbian {
+    # Self-signed app UID (range 0xE0000000-0xEFFFFFFF). Set explicitly so the
+    # identity is stable instead of derived from TARGET; keep emptyfile.path below
+    # (the /private/<uid> data-cage dir) in sync with this value.
+    TARGET.UID3 = 0xE7B5C0DE
+
     TARGET.EPOCHEAPSIZE = 0x020000 0x2000000
     # Required capabilities for network streaming + local storage
     TARGET.CAPABILITY += NetworkServices ReadUserData WriteUserData UserEnvironment
@@ -39,7 +44,7 @@ symbian {
 
     # Deploy an empty placeholder file to create the private directory
     emptyfile.sources = data/.placeholder
-    emptyfile.path = /private/e7654321
+    emptyfile.path = /private/e7b5c0de
     DEPLOYMENT += emptyfile
 }
 
