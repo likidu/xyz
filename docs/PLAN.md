@@ -14,6 +14,26 @@ API details in `docs/API_NOTES.md`.
 - [ ] Live login with a real registered number (sends real SMS — user-run)
 - [ ] Device: TLS handshake experiment vs official hosts → DEVICE_NOTES.md
 
+## M2 — Updates + Subscriptions (native content client)
+See `tasks/plan.md` for the detailed plan; design refs in `docs/DESIGN_SYSTEM.md`,
+API details in `docs/API_NOTES.md`.
+- [x] Native `XyzApiClient` — `xyzApi` context property; `fetchInbox` / `fetchSubscriptions`;
+      iOS-app spoof headers; `shapeInboxItem` / `shapeSubscription` (relative time, 99+ cap);
+      401 → `sessionExpired`; `XYZ_API_BASE` env override; 15s timeout; qjson parse
+- [x] Placeholder glyph SVGs — 4 tab icons + 6 content icons (`qml/gfx/`)
+- [x] `BelleTabBar` — 56px, 4-tab, active-dot, grab handle
+- [x] `BelleHeader` optional trailing action (grid/list toggle)
+- [x] `UpdatesPage` — glossy title bar, My Subscriptions pill, episode cards, tab bar
+- [x] `SubscriptionsPage` — grid (3-col + Often badge) + list (search/starred/rows)
+- [x] `AppWindow` wiring — login → Updates, tab routing, session-expiry handler
+- [x] Local mock server (`scripts/mock-content.ps1`)
+- [x] Simulator: full flow verified (mock), visual check vs design screenshots
+- [ ] Live read against real API with a stored token (read-only; user-run)
+- [ ] Device: content-API TLS experiment → DEVICE_NOTES.md
+
+Non-goals (deferred): player/mini-player, pagination, search/sort/star actions,
+starred fetch, Discover/Search tabs, token refresh.
+
 ## Device experiments
 See `docs/DEVICE_NOTES.md` (append-only log, dated entries).
 

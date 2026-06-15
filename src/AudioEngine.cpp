@@ -66,12 +66,12 @@ void AudioEngine::setSource(const QUrl &url)
     }
 }
 
-qreal AudioEngine::volume() const
+double AudioEngine::volume() const
 {
     return m_volume;
 }
 
-void AudioEngine::setVolume(qreal vol)
+void AudioEngine::setVolume(double vol)
 {
     if (qFuzzyCompare(m_volume, vol))
         return;
@@ -119,7 +119,7 @@ int AudioEngine::duration() const
     return m_duration;
 }
 
-qreal AudioEngine::bufferProgress() const
+double AudioEngine::bufferProgress() const
 {
     return m_bufferProgress;
 }
@@ -347,7 +347,7 @@ void AudioEngine::onPlayerDurationChanged(qint64 dur)
 void AudioEngine::onPlayerBufferStatusChanged(int percent)
 {
     // QMediaPlayer reports 0-100, AudioFacade used 0.0-1.0
-    qreal newProgress = percent / 100.0;
+    double newProgress = percent / 100.0;
     // Only emit on 2%+ change to avoid flooding the QML event loop during long playback
     if (qAbs(m_bufferProgress - newProgress) >= 0.02) {
         m_bufferProgress = newProgress;

@@ -49,7 +49,8 @@ SOURCES += \
     src/TlsChecker.cpp \
     src/StorageManager.cpp \
     src/AudioEngine.cpp \
-    src/AuthClient.cpp
+    src/AuthClient.cpp \
+    src/XyzApiClient.cpp
 
 HEADERS += \
     src/MemoryMonitor.h \
@@ -57,7 +58,8 @@ HEADERS += \
     src/AppConfig.h \
     src/StorageManager.h \
     src/AudioEngine.h \
-    src/AuthClient.h
+    src/AuthClient.h \
+    src/XyzApiClient.h
 
 RESOURCES += \
     qml/qml.qrc
@@ -68,8 +70,11 @@ OTHER_FILES += \
     qml/MemoryBar.qml \
     qml/XyzPageStackWindow.qml \
     qml/BelleHeader.qml \
+    qml/BelleTabBar.qml \
     qml/LoginPage.qml \
     qml/VerifyCodePage.qml \
     qml/HomePage.qml \
+    qml/UpdatesPage.qml \
+    qml/SubscriptionsPage.qml \
     qml/js/Theme.js
 

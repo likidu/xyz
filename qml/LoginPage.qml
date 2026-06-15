@@ -168,6 +168,8 @@ Page {
 
             TextInput {
                 id: phoneInput
+                // TEST ONLY: pre-filled login number in debug builds (XYZ_DEBUG) for device testing.
+                text: debugMode ? "17601270092" : ""
                 anchors.left: ccButton.right
                 anchors.leftMargin: 14
                 anchors.right: parent.right
@@ -202,7 +204,12 @@ Page {
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
                 anchors.right: parent.right
-                onClicked: phoneInput.forceActiveFocus()
+                onClicked: {
+                    phoneInput.forceActiveFocus();
+                    // Symbian opens the VKB on a click that reaches the TextInput; this
+                    // overlay swallows that click, so request the input panel explicitly.
+                    phoneInput.openSoftwareInputPanel();
+                }
             }
         }
 

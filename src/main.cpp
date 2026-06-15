@@ -29,6 +29,7 @@
 #include "TlsChecker.h"
 #include "AudioEngine.h"
 #include "AuthClient.h"
+#include "XyzApiClient.h"
 
 namespace {
 QTextStream &infoStream()
@@ -410,6 +411,7 @@ int main(int argc, char *argv[])
     TlsChecker tlsChecker;
     AudioEngine audioEngine;
     AuthClient authClient(&storage);
+    XyzApiClient xyzApiClient(&storage);
 
     QDeclarativeView view;
     view.rootContext()->setContextProperty("storage", &storage);
@@ -423,6 +425,7 @@ int main(int argc, char *argv[])
     view.rootContext()->setContextProperty("tlsChecker", &tlsChecker);
     view.rootContext()->setContextProperty("audioEngine", &audioEngine);
     view.rootContext()->setContextProperty("auth", &authClient);
+    view.rootContext()->setContextProperty("xyzApi", &xyzApiClient);
     static SslIgnoringNamFactory namFactory;
     view.engine()->setNetworkAccessManagerFactory(&namFactory);
     applyImportPaths(view.engine());

@@ -8,7 +8,10 @@ Rectangle {
 
     property alias title: titleText.text
     property bool showBack: true
+    property string actionIconSource: ""
+    property bool actionOn: false
     signal backClicked
+    signal actionClicked
 
     height: Theme.headerHeight
     gradient: Gradient {
@@ -50,13 +53,43 @@ Rectangle {
         id: titleText
         anchors.left: header.showBack ? backButton.right : parent.left
         anchors.leftMargin: header.showBack ? 8 : 16
-        anchors.right: parent.right
+        anchors.right: actionButton.visible ? actionButton.left : parent.right
         anchors.rightMargin: 6
         anchors.verticalCenter: parent.verticalCenter
         font.pixelSize: 19
         font.weight: Font.DemiBold
         color: Theme.text
         elide: Text.ElideRight
+    }
+
+    Item {
+        id: actionButton
+        visible: header.actionIconSource !== ""
+        width: 44
+        height: 44
+        anchors.right: parent.right
+        anchors.rightMargin: 4
+        anchors.verticalCenter: parent.verticalCenter
+
+        Rectangle {
+            anchors.fill: parent
+            radius: 4
+            color: Theme.accentDeep
+            opacity: actionMouse.pressed ? 0.4 : 0
+        }
+        Image {
+            source: header.actionIconSource
+            width: 24
+            height: 24
+            smooth: true
+            anchors.centerIn: parent
+            opacity: header.actionOn ? 1.0 : 0.8
+        }
+        MouseArea {
+            id: actionMouse
+            anchors.fill: parent
+            onClicked: header.actionClicked()
+        }
     }
 
     Rectangle {

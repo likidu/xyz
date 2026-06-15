@@ -13,7 +13,7 @@ class AudioEngine : public QObject
 
     // Playback properties
     Q_PROPERTY(QUrl source READ source WRITE setSource NOTIFY sourceChanged)
-    Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
+    Q_PROPERTY(double volume READ volume WRITE setVolume NOTIFY volumeChanged)
     Q_PROPERTY(bool muted READ muted WRITE setMuted NOTIFY mutedChanged)
 
     // State properties (read-only from QML)
@@ -21,7 +21,7 @@ class AudioEngine : public QObject
     Q_PROPERTY(int status READ status NOTIFY statusChanged)
     Q_PROPERTY(int position READ position NOTIFY positionChanged)
     Q_PROPERTY(int duration READ duration NOTIFY durationChanged)
-    Q_PROPERTY(qreal bufferProgress READ bufferProgress NOTIFY bufferProgressChanged)
+    Q_PROPERTY(double bufferProgress READ bufferProgress NOTIFY bufferProgressChanged)
     Q_PROPERTY(bool seekable READ seekable NOTIFY seekableChanged)
     Q_PROPERTY(bool available READ available NOTIFY availableChanged)
     Q_PROPERTY(QString errorString READ errorString NOTIFY errorStringChanged)
@@ -48,8 +48,8 @@ public:
     QUrl source() const;
     void setSource(const QUrl &url);
 
-    qreal volume() const;
-    void setVolume(qreal vol);
+    double volume() const;
+    void setVolume(double vol);
 
     bool muted() const;
     void setMuted(bool m);
@@ -58,7 +58,7 @@ public:
     int status() const;
     int position() const;
     int duration() const;
-    qreal bufferProgress() const;
+    double bufferProgress() const;
     bool seekable() const;
     bool available() const;
     QString errorString() const;
@@ -116,13 +116,13 @@ private:
 
     QMediaPlayer *m_player;
     QUrl m_source;
-    qreal m_volume;
+    double m_volume;
     bool m_muted;
     int m_state;
     int m_status;
     int m_position;
     int m_duration;
-    qreal m_bufferProgress;
+    double m_bufferProgress;
     bool m_seekable;
     bool m_available;
     QString m_errorString;

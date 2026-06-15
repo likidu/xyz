@@ -5,15 +5,28 @@
         <file>MemoryBar.qml</file>
         <file>XyzPageStackWindow.qml</file>
         <file>BelleHeader.qml</file>
+        <file>BelleTabBar.qml</file>
         <file>LoginPage.qml</file>
         <file>VerifyCodePage.qml</file>
         <file>HomePage.qml</file>
+        <file>UpdatesPage.qml</file>
+        <file>SubscriptionsPage.qml</file>
         <file>js/Theme.js</file>
         <file>gfx/icon-link.svg</file>
         <file>gfx/icon-x.svg</file>
         <file>gfx/icon-back.svg</file>
         <file>gfx/icon-chevron-down.svg</file>
         <file>gfx/login-orb.svg</file>
+        <file>gfx/tab-compass.svg</file>
+        <file>gfx/tab-search.svg</file>
+        <file>gfx/tab-headphones.svg</file>
+        <file>gfx/tab-person.svg</file>
+        <file>gfx/icon-play.svg</file>
+        <file>gfx/icon-queue.svg</file>
+        <file>gfx/icon-comment.svg</file>
+        <file>gfx/icon-dots.svg</file>
+        <file>gfx/icon-list.svg</file>
+        <file>gfx/icon-grid.svg</file>
         <file>sfx/test-tone.wav</file>
     </qresource>
 </RCC>

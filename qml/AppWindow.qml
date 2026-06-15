@@ -22,6 +22,19 @@ XyzPageStackWindow {
         return auth.isLoggedIn();
     }
 
+    function handleTab(index) {
+        if (index === 2) {
+            while (pageStack.currentPage !== updatesPage && pageStack.depth > 1) {
+                pageStack.pop();
+            }
+        } else if (index === 3) {
+            if (!pageStack.busy && pageStack.currentPage !== homePage) {
+                pageStack.push(homePage);
+            }
+        }
+        // index 0 (Discover) / 1 (Search) are inert placeholders for now.
+    }
+
     ToolBarLayout {
         id: toolBarLayout
         ToolButton {
@@ -51,6 +64,15 @@ XyzPageStackWindow {
         }
     }
 
+    Connections {
+        target: xyzApi
+        onSessionExpired: {
+            auth.logout();
+            pageStack.clear();
+            pageStack.push(loginPage);
+        }
+    }
+
     LoginPage {
         id: loginPage
         onCodeSent: {
@@ -65,8 +87,10 @@ XyzPageStackWindow {
     VerifyCodePage {
         id: verifyCodePage
         onLoggedIn: {
+            updatesPage.loadedOnce = false;
+            subscriptionsPage.loadedOnce = false;
             pageStack.clear();
-            pageStack.push(homePage);
+            pageStack.push(updatesPage);
         }
     }
 
@@ -77,6 +101,17 @@ XyzPageStackWindow {
             pageStack.clear();
             pageStack.push(loginPage);
         }
+    }
+
+    UpdatesPage {
+        id: updatesPage
+        onMySubsRequested: pageStack.push(subscriptionsPage)
+        onTabSelected: window.handleTab(index)
+    }
+
+    SubscriptionsPage {
+        id: subscriptionsPage
+        onTabSelected: window.handleTab(index)
     }
 
     SelfTestPage {
@@ -146,7 +181,7 @@ XyzPageStackWindow {
         }
     }
 
-    initialPage: isLoggedIn() ? homePage : loginPage
+    initialPage: isLoggedIn() ? updatesPage : loginPage
 
     Keys.onReleased: {
         if (event.key === Qt.Key_Escape) {
