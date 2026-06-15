@@ -134,6 +134,22 @@ Direct to `https://api.xiaoyuzhoufm.com`, POST + JSON, with **iOS-app spoof head
 |---|---|---|
 | Updates feed | `POST /v1/inbox/list` | `{"limit":"20"}` (+ `loadMoreKey:{pubDate,id}` for paging — deferred) |
 | Subscriptions | `POST /v1/subscription/list` | `{"limit":"20","sortOrder":"desc","sortBy":"subscribedAt"}` |
+| Episode detail (M3) | `GET /v1/episode/get?eid=<eid>` | **GET, eid is a query param — no JSON body.** |
+| Episode comments (M3) | `POST /v1/comment/list-primary` | `{"order":"HOT","owner":{"id":"<eid>","type":"EPISODE"}}` |
+
+M3 episode/comment shapes (confirmed against ultrazg/xyz v1.10.0 Go source — two easy-to-miss
+traps; the mock has diverged from the real API before, so verify against live read-only endpoints):
+
+- `episode/get` is a **GET** (the proxy's facing `/episode_detail` is POST, but the real upstream
+  call is `GET …?eid=`). Returns the episode object under `data` (a **map**, not a list):
+  `title`, `podcast.title` (parent show), `description` (plain) / `shownotes` (HTML), `duration`
+  (sec), `pubDate` (ISO), `playCount`, `commentCount`, `image.{picUrl…thumbnailUrl}`. **No
+  episode-number field** — any "EP.47"/"183." is only inside the `title` string.
+- `comment/list-primary` body wraps the eid as `{"owner":{"id":…,"type":"EPISODE"}}` for the real
+  API (a flat `{"id":…}` is the proxy's facing form only). `order` ∈ `HOT`/`TIME`/`TIMESTAMP`
+  (no `SMART`). Returns `{data:[…], totalCount, loadMoreKey}`; per comment `text`, `likeCount`,
+  `author.nickname`, `author.avatar.picture.*` (avatar is nested one level deeper than the episode
+  `image`), `ipLoc`. Implemented natively as `fetchEpisode`/`fetchComments` in `XyzApiClient`.
 
 - Tokens are read from `StorageManager` (`auth.accessToken`). HTTP **401** → `sessionExpired`
   → re-login (refresh-token flow still deferred).

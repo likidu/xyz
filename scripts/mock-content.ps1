@@ -28,10 +28,36 @@ $subs = @{ code=200; msg="OK"; data=@(
      podcasters=@(@{ nickname="Sol"; avatar=@{ picture=@{ smallPicUrl=$img; thumbnailUrl=$img } } }) }
 ) } | ConvertTo-Json -Depth 8
 
+# episode/get returns the episode object under "data" (a map, not a list).
+$episode = @{ code=200; msg="OK"; data=@{
+  type="EPISODE"; eid="e2"; pid="p1";
+  title="183. Reading the Stars: Poems at the Edge of Night";
+  description="When we look up at the night sky, what are we really searching for? This episode drifts from the first telescope of childhood all the way to dark matter, the Fermi paradox, and that strange feeling of being small yet somehow healed.";
+  duration=6900; pubDate="2026-06-12T18:00:00.000Z"; playCount=7941; commentCount=128;
+  image=@{ thumbnailUrl=$img; smallPicUrl=$img; middlePicUrl=$img };
+  podcast=@{ pid="p1"; title="Cosmic Drift"; image=@{ smallPicUrl=$img; thumbnailUrl=$img } }
+} } | ConvertTo-Json -Depth 8
+
+# comment/list-primary returns the comment array under "data" + a totalCount.
+$comments = @{ code=200; msg="OK"; totalCount=128; data=@(
+  @{ id="c1"; type="COMMENT"; likeCount=328; ipLoc="Beijing";
+     text="Halfway through I had to blink back tears - turns out I'm not the only one who stares at the night sky. Thank you.";
+     author=@{ nickname="May"; avatar=@{ picture=@{ thumbnailUrl=$img; smallPicUrl=$img } } } },
+  @{ id="c2"; type="COMMENT"; likeCount=156; ipLoc="Shanghai";
+     text="So much packed in - already on my second listen. The Fermi paradox part blew my mind.";
+     author=@{ nickname="Juan"; avatar=@{ picture=@{ thumbnailUrl=$img; smallPicUrl=$img } } } },
+  @{ id="c3"; type="COMMENT"; likeCount=64; ipLoc="Chengdu";
+     text="That closing line about feeling small yet healed will stay with me all week.";
+     author=@{ nickname="Pico"; avatar=@{ picture=@{ thumbnailUrl=$img } } } }
+) } | ConvertTo-Json -Depth 8
+
 while ($listener.IsListening) {
   $ctx = $listener.GetContext()
   $path = $ctx.Request.Url.AbsolutePath
-  $body = if ($path -like "*subscription*") { $subs } else { $inbox }
+  $body = if ($path -like "*subscription*") { $subs }
+          elseif ($path -like "*episode*") { $episode }
+          elseif ($path -like "*comment*") { $comments }
+          else { $inbox }
   $bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
   $ctx.Response.ContentType = "application/json; charset=utf-8"
   $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)

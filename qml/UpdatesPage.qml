@@ -13,6 +13,7 @@ Page {
 
     signal mySubsRequested
     signal tabSelected(int index)
+    signal episodeRequested(variant item)
 
     function load() {
         if (page.loadedOnce) {
@@ -127,6 +128,17 @@ Page {
             width: list.width
             height: col.height + 28
 
+            // Whole-card tap target → open the Episode page. It sits behind the visual
+            // content (none of which grabs the mouse), so a tap anywhere on the row is
+            // caught here, while the ListView still receives drags for flicking. The
+            // earlier cover+title-only target missed taps on the description / meta /
+            // play area, which read as "the item isn't tappable" on the small screen.
+            MouseArea {
+                id: cardMouse
+                anchors.fill: parent
+                onClicked: page.episodeRequested(modelData)
+            }
+
             Column {
                 id: col
                 anchors.top: parent.top
@@ -238,6 +250,14 @@ Page {
                         Image { source: "gfx/icon-play.svg"; width: 24; height: 24; smooth: true; anchors.centerIn: parent }
                     }
                 }
+            }
+
+            // press feedback (native Belle rows highlight on press) — a faint accent
+            // wash also makes it obvious on-device that the tap registered.
+            Rectangle {
+                anchors.fill: parent
+                color: Theme.accent
+                opacity: cardMouse.pressed ? 0.10 : 0
             }
 
             Rectangle {

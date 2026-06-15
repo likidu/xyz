@@ -47,6 +47,8 @@ bool XyzApiClient::busy() const { return m_busy; }
 QString XyzApiClient::errorMessage() const { return m_errorMessage; }
 QVariantList XyzApiClient::inboxItems() const { return m_inboxItems; }
 QVariantList XyzApiClient::subscriptions() const { return m_subscriptions; }
+QVariantMap XyzApiClient::episode() const { return m_episode; }
+QVariantList XyzApiClient::comments() const { return m_comments; }
 
 void XyzApiClient::fetchInbox()
 {
@@ -62,6 +64,33 @@ void XyzApiClient::fetchSubscriptions()
     body.insert(QString::fromLatin1("sortOrder"), QString::fromLatin1("desc"));
     body.insert(QString::fromLatin1("sortBy"), QString::fromLatin1("subscribedAt"));
     startPost(SubscriptionsRequest, QString::fromLatin1("/v1/subscription/list"), body);
+}
+
+// Episode detail is a GET with the eid as a query param (no body) — confirmed from
+// the ultrazg/xyz Go source (handlers/episode.go).
+void XyzApiClient::fetchEpisode(const QString &eid)
+{
+    if (eid.isEmpty()) {
+        return;
+    }
+    startGet(EpisodeRequest,
+             QString::fromLatin1("/v1/episode/get?eid=") + QString(QUrl::toPercentEncoding(eid)));
+}
+
+// Top comments. The official body wraps the eid in an owner object — a flat
+// {"id":...} is the proxy's facing shape, NOT what the real API expects.
+void XyzApiClient::fetchComments(const QString &eid)
+{
+    if (eid.isEmpty()) {
+        return;
+    }
+    QVariantMap owner;
+    owner.insert(QString::fromLatin1("id"), eid);
+    owner.insert(QString::fromLatin1("type"), QString::fromLatin1("EPISODE"));
+    QVariantMap body;
+    body.insert(QString::fromLatin1("order"), QString::fromLatin1("HOT"));
+    body.insert(QString::fromLatin1("owner"), owner);
+    startPost(CommentsRequest, QString::fromLatin1("/v1/comment/list-primary"), body);
 }
 
 void XyzApiClient::setBusy(bool busy)
@@ -132,6 +161,31 @@ void XyzApiClient::startPost(RequestType type, const QString &path, const QVaria
     const QByteArray payload = serializer.serialize(body);
 
     m_reply = m_nam->post(request, payload);
+    connect(m_reply, SIGNAL(finished()), this, SLOT(onReplyFinished()));
+    connect(m_reply, SIGNAL(sslErrors(const QList<QSslError> &)),
+            this, SLOT(onSslErrors(const QList<QSslError> &)));
+    m_timeout.start(15000);
+}
+
+void XyzApiClient::startGet(RequestType type, const QString &path)
+{
+    abortActiveRequest();
+    setErrorMessage(QString());
+    setBusy(true);
+    m_requestType = type;
+
+    if (!QSslSocket::supportsSsl()) {
+        setErrorMessage(QString::fromLatin1("SSL not supported at runtime."));
+        setBusy(false);
+        m_requestType = NoneRequest;
+        return;
+    }
+
+    const QUrl url(QString::fromLatin1(contentBase()) + path);
+    QNetworkRequest request(url);
+    applyContentHeaders(request);
+
+    m_reply = m_nam->get(request);
     connect(m_reply, SIGNAL(finished()), this, SLOT(onReplyFinished()));
     connect(m_reply, SIGNAL(sslErrors(const QList<QSslError> &)),
             this, SLOT(onSslErrors(const QList<QSslError> &)));
@@ -238,6 +292,30 @@ void XyzApiClient::onReplyFinished()
         return;
     }
 
+    if (type == EpisodeRequest) {
+        // episode/get returns the episode object under "data" (a map, not a list);
+        // fall back to the top level if the wrapper is ever absent.
+        QVariantMap raw = top.value(QString::fromLatin1("data")).toMap();
+        if (raw.isEmpty()) {
+            raw = top;
+        }
+        m_episode = shapeEpisode(raw);
+        setBusy(false);
+        emit episodeLoaded();
+        return;
+    }
+
+    if (type == CommentsRequest) {
+        QVariantList shaped;
+        for (int i = 0; i < rawItems.size(); ++i) {
+            shaped.append(shapeComment(rawItems.at(i).toMap()));
+        }
+        m_comments = shaped;
+        setBusy(false);
+        emit commentsLoaded();
+        return;
+    }
+
     setBusy(false);
 }
 
@@ -319,6 +397,9 @@ QVariantMap XyzApiClient::shapeInboxItem(const QVariantMap &item) const
 {
     QVariantMap out;
 
+    // eid lets the Episode page fetch detail/comments for the tapped card.
+    out.insert(QString::fromLatin1("eid"), item.value(QString::fromLatin1("eid")).toString());
+
     QString cover = pickImageUrl(item.value(QString::fromLatin1("image")).toMap());
     if (cover.isEmpty()) {
         const QVariantMap podcast = item.value(QString::fromLatin1("podcast")).toMap();
@@ -373,5 +454,58 @@ QVariantMap XyzApiClient::shapeSubscription(const QVariantMap &item) const
                relativeTime(item.value(QString::fromLatin1("latestEpisodePubDate")).toString()));
     out.insert(QString::fromLatin1("often"),
                item.value(QString::fromLatin1("subscriptionOftenPlayed")).toBool());
+    return out;
+}
+
+QVariantMap XyzApiClient::shapeEpisode(const QVariantMap &item) const
+{
+    QVariantMap out;
+
+    QString cover = pickImageUrl(item.value(QString::fromLatin1("image")).toMap());
+    const QVariantMap podcast = item.value(QString::fromLatin1("podcast")).toMap();
+    if (cover.isEmpty()) {
+        cover = pickImageUrl(podcast.value(QString::fromLatin1("image")).toMap());
+    }
+    out.insert(QString::fromLatin1("coverUrl"), cover);
+    out.insert(QString::fromLatin1("title"), item.value(QString::fromLatin1("title")).toString());
+    // No episode-number field exists in the API — the show line is just the podcast title.
+    out.insert(QString::fromLatin1("showTitle"), podcast.value(QString::fromLatin1("title")).toString());
+    // Plain-text show notes (the API also has an HTML "shownotes" field — deferred).
+    out.insert(QString::fromLatin1("notes"), item.value(QString::fromLatin1("description")).toString());
+
+    const int durationSec = item.value(QString::fromLatin1("duration")).toInt();
+    out.insert(QString::fromLatin1("durationText"),
+               QString::fromLatin1("%1 min").arg((durationSec + 30) / 60));
+    out.insert(QString::fromLatin1("whenText"),
+               relativeTime(item.value(QString::fromLatin1("pubDate")).toString()));
+    out.insert(QString::fromLatin1("commentCount"),
+               QString::number(item.value(QString::fromLatin1("commentCount")).toInt()));
+
+    return out;
+}
+
+QVariantMap XyzApiClient::shapeComment(const QVariantMap &item) const
+{
+    QVariantMap out;
+
+    const QVariantMap author = item.value(QString::fromLatin1("author")).toMap();
+    out.insert(QString::fromLatin1("name"), author.value(QString::fromLatin1("nickname")).toString());
+
+    const QVariantMap picture = author.value(QString::fromLatin1("avatar")).toMap()
+                                 .value(QString::fromLatin1("picture")).toMap();
+    out.insert(QString::fromLatin1("avatarUrl"), pickImageUrl(picture));
+
+    // ipLoc (e.g. "上海") sits on the comment and is mirrored inside author; prefer the
+    // comment-level one, fall back to the author's.
+    QString loc = item.value(QString::fromLatin1("ipLoc")).toString();
+    if (loc.isEmpty()) {
+        loc = author.value(QString::fromLatin1("ipLoc")).toString();
+    }
+    out.insert(QString::fromLatin1("loc"), loc);
+
+    out.insert(QString::fromLatin1("text"), item.value(QString::fromLatin1("text")).toString());
+    out.insert(QString::fromLatin1("likes"),
+               QString::number(item.value(QString::fromLatin1("likeCount")).toInt()));
+
     return out;
 }
