@@ -150,7 +150,7 @@ Page {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 9
                         Image { source: "gfx/tab-search.svg"; width: 17; height: 17; smooth: true; opacity: 0.6; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: qsTr("Search your subscriptions"); font.pixelSize: 14; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: qsTr("Search your subscriptions"); font.pixelSize: 15; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
                     }
                 }
             }
@@ -164,7 +164,7 @@ Page {
                     anchors.bottom: parent.bottom
                     anchors.bottomMargin: 8
                     text: qsTr("Starred")
-                    font.pixelSize: 13
+                    font.pixelSize: 15
                     font.weight: Font.DemiBold
                     color: Theme.accentBright
                 }
@@ -193,7 +193,7 @@ Page {
                         Text {
                             width: 220
                             text: qsTr("Star shows you love for a shortcut on the Updates page")
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             color: Theme.textDim
                             wrapMode: Text.WordWrap
                             horizontalAlignment: Text.AlignHCenter
@@ -201,7 +201,7 @@ Page {
                         }
                         Text {
                             text: "+ " + qsTr("Add")
-                            font.pixelSize: 14
+                            font.pixelSize: 15
                             font.weight: Font.DemiBold
                             color: Theme.accentBright
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -219,7 +219,7 @@ Page {
                     anchors.bottom: parent.bottom
                     anchors.bottomMargin: 8
                     text: qsTr("All Subscriptions")
-                    font.pixelSize: 13
+                    font.pixelSize: 15
                     font.weight: Font.DemiBold
                     color: Theme.accentBright
                 }
@@ -267,7 +267,7 @@ Page {
                     Text {
                         width: parent.width
                         text: modelData.name
-                        font.pixelSize: 15
+                        font.pixelSize: 16
                         font.weight: Font.DemiBold
                         color: Theme.text
                         elide: Text.ElideRight
@@ -300,7 +300,7 @@ Page {
                         }
                         Text {
                             text: modelData.hostsText + "  ·  " + modelData.whenText
-                            font.pixelSize: 12
+                            font.pixelSize: 13
                             color: Theme.textDim
                             elide: Text.ElideRight
                             anchors.verticalCenter: parent.verticalCenter

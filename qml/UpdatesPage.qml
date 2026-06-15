@@ -87,7 +87,7 @@ Page {
                 }
                 Text {
                     text: qsTr("My Subscriptions")
-                    font.pixelSize: 13
+                    font.pixelSize: 14
                     font.weight: Font.DemiBold
                     color: Theme.accentBright
                     anchors.verticalCenter: parent.verticalCenter
@@ -163,7 +163,7 @@ Page {
                         Text {
                             width: parent.width
                             text: modelData.title
-                            font.pixelSize: 15
+                            font.pixelSize: 17
                             font.bold: true
                             color: Theme.text
                             wrapMode: Text.WordWrap
@@ -173,8 +173,8 @@ Page {
                         Text {
                             width: parent.width
                             text: modelData.desc
-                            font.pixelSize: 12
-                            color: Theme.textDim
+                            font.pixelSize: 15
+                            color: Theme.textBody
                             wrapMode: Text.WordWrap
                             maximumLineCount: 2
                             elide: Text.ElideRight
@@ -187,22 +187,22 @@ Page {
                     width: parent.width
                     spacing: 9
 
-                    Text { text: modelData.durationText; font.pixelSize: 11; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: modelData.durationText; font.pixelSize: 13; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
                     Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: modelData.whenText; font.pixelSize: 11; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: modelData.whenText; font.pixelSize: 13; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
                     Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
                     Row {
                         spacing: 4
                         anchors.verticalCenter: parent.verticalCenter
                         Image { source: "gfx/tab-headphones.svg"; width: 13; height: 13; smooth: true; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: modelData.playCount; font.pixelSize: 11; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: modelData.playCount; font.pixelSize: 13; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
                     }
                     Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
                     Row {
                         spacing: 4
                         anchors.verticalCenter: parent.verticalCenter
                         Image { source: "gfx/icon-comment.svg"; width: 13; height: 13; smooth: true; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: modelData.commentCount; font.pixelSize: 11; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: modelData.commentCount; font.pixelSize: 13; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
                     }
                 }
 
@@ -221,7 +221,7 @@ Page {
                             spacing: 6
                             anchors.verticalCenter: parent.verticalCenter
                             Image { source: "gfx/icon-comment.svg"; width: 26; height: 26; smooth: true; anchors.verticalCenter: parent.verticalCenter }
-                            Text { text: modelData.commentCount; font.pixelSize: 13; font.weight: Font.DemiBold; color: Theme.accentBright; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: modelData.commentCount; font.pixelSize: 14; font.weight: Font.DemiBold; color: Theme.accentBright; anchors.verticalCenter: parent.verticalCenter }
                         }
                         Image { source: "gfx/icon-dots.svg"; width: 26; height: 26; smooth: true; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
                     }
