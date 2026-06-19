@@ -30,6 +30,7 @@
 #include "AudioEngine.h"
 #include "AuthClient.h"
 #include "XyzApiClient.h"
+#include "PlayerController.h"
 
 namespace {
 QTextStream &infoStream()
@@ -410,6 +411,7 @@ int main(int argc, char *argv[])
     MemoryMonitor memoryMonitor;
     TlsChecker tlsChecker;
     AudioEngine audioEngine;
+    PlayerController player(&audioEngine);
     AuthClient authClient(&storage);
     XyzApiClient xyzApiClient(&storage);
 
@@ -424,6 +426,7 @@ int main(int argc, char *argv[])
     view.rootContext()->setContextProperty("memoryMonitor", &memoryMonitor);
     view.rootContext()->setContextProperty("tlsChecker", &tlsChecker);
     view.rootContext()->setContextProperty("audioEngine", &audioEngine);
+    view.rootContext()->setContextProperty("player", &player);
     view.rootContext()->setContextProperty("auth", &authClient);
     view.rootContext()->setContextProperty("xyzApi", &xyzApiClient);
     static SslIgnoringNamFactory namFactory;

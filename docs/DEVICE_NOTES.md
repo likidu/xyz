@@ -3,6 +3,107 @@ Symbian Belle Device Notes
 
 Hardware: Nokia C7 (Belle FP2)
 
+## 2026-06-19 — Player: real m4a download+play works on device — the -14 was a stuck MMF, cleared by reboot
+
+Result: the Self-test "Player" download → play of a **real downloaded Xiaoyuzhou `.m4a`**
+now plays **with audio** on device — position/duration advance and sound comes out. This is
+the **same build** that returned `symbian -14` (KErrInUse) at the audio-output stage on
+2026-06-14 — **no code changes since**. The only difference was a **phone reboot**.
+
+Conclusion: the persistent `-14` from the 2026-06-14 saga was **not a code bug** — it was a
+**wedged MMF audio-output state** accumulated from the earlier run of failed experiments.
+Symbian MMF is a shared OS server with no graceful recovery (same family as the 2026-02-17
+`-12014` position-write brick that kills *all* audio until restart). Once its audio output
+is stuck "in use", **no amount of correct play-timing or path-fixing can reacquire it** —
+which is exactly why deferred-play + public-path were right yet `-14` never cleared. A device
+restart resets the MMF server and the (already-correct) code just works.
+
+This retroactively **validates the 2026-06-14 fixes** — they were correct all along:
+- download to a **public** path MMF can read (`E:/Xyz/audio` → `C:/Data/Xyz/audio`), never
+  the `/private/<UID>` data cage;
+- defer `play()` until `mediaStatus` reaches Loaded(3)/Buffered(6).
+So m4a/AAC decodes and plays through `PlayerController` on device.
+
+**Rule for the next audio test:** if experiments start failing with `-14` / silent output /
+`mediaStatus` stuck after an earlier crash or a `-12014`, **reboot the phone before
+concluding the code is wrong**, and re-confirm any audio fix on a freshly-rebooted device. A
+run of failed MMF acquisitions can poison the audio server for the rest of the session.
+
+## 2026-06-14 — Player: MMF can't read the private data cage (silent playback)
+
+Symptom (C7): first episode player test. Download completed (real file, took a while),
+the player reached `playingState` (pill "pass"), but **no audio**, and both position and
+duration stayed **0:00** ("playing 0:00 / 0:00"). No `QMediaPlayer` error / InvalidMedia
+was surfaced.
+
+Root cause: `EpisodeDownloader::audioDir()` probed `QDesktopServices::DataLocation` first,
+which on this self-signed app is the **`/private/<UID>/` data cage** (same place the DB
+lands — see 2026-02-17 SQLite note). The downloaded `.m4a` therefore saved into the cage.
+**Symbian MMF runs in a separate server process and cannot read another app's data cage**,
+so `QMediaPlayer` got a path it couldn't open → flipped to PlayingState but never loaded
+or decoded → duration 0, position 0, silence, and (unhelpfully) no clean error.
+
+Why "Play tone" (qrc:) worked but this didn't: Qt stages a `qrc:` resource to an
+accessible temp file before handing it to MMF, so that path is readable; our caged file
+was not. Same lesson as the 2026-02-18 artwork cache, which had to write to **`E:/`**
+(public) for the images to load.
+
+Fix: download media only to **PUBLIC** locations the MMF server can read — prefer
+`E:/Xyz/audio` (memory card), then `C:/Data/Xyz/audio` (public phone storage, already
+proven writable: the app log lives at `C:/Data/Xyz/logs`). On Symbian, never use
+DataLocation/app-private for media. (`audioDir()` now lists only public bases on device;
+DataLocation remains a desktop/simulator fallback under `#ifndef Q_OS_SYMBIAN`.)
+
+Diagnostics added to the Self-test "Player" section to make the next device test
+conclusive: it now shows the resolved `src:` file path and the live MMF `[mediaStatus N]`
+(0 unknown · 2 loading · 3 loaded · 4 stalled · 5 buffering · 6 buffered · 8 invalidMedia).
+
+Re-test (same day): the cage fix **worked** — MMF now opens the file and `mediaStatus`
+climbs `5 → 6` (BufferedMedia), confirming the file is readable and the m4a/AAC codec
+decodes. But a **new** error surfaced: `symbian -14` = **KErrInUse**, with playback still
+silent and position/duration stuck at 0:00. The log showed `state -> 1` (we called
+`play()`) *before* `status -> 5/6` — i.e. **`play()` was called before the media loaded.**
+
+Second root cause: on Symbian, calling `play()` before the media reaches LoadedMedia makes
+MMF acquire the audio output prematurely; the buffered clip then can't take the output
+("already in use", -14), so it buffers but never sounds. ("Play tone" dodges this only
+because a tiny local WAV loads almost instantly.)
+
+Fix: `PlayerController` now **defers `play()` until mediaStatus reaches Loaded(3)/Buffered(6)**
+(`m_waitingToPlay` + an `onAudioStatusChanged` watcher), so there's exactly one,
+correctly-timed play. Kept in the controller, not the shared `AudioEngine`, so "Play tone"
+and the episode page are untouched. setMedia() on Symbian opens the file and emits
+LoadedMedia without needing play(), so there's no load deadlock.
+
+Re-test of the deferred-play fix: **did NOT clear -14.** `src:` confirmed
+`C:/Data/Xyz/audio/selftest.m4a` (public, readable). So -14 is **not** a play-timing
+race — it fires at the audio-output stage regardless of when play() is called. Hypothesis
+#2 was wrong. (Also seen: retry after a -14 sticks at `mediaStatus 0` — a separate replay
+bug, `AudioEngine::setSource` early-returns on an unchanged URL so nothing reloads.)
+
+Full log (xyz.log) analysis: the deferred-play fix works exactly as intended — for an m4a
+the sequence is `status 2 → 3 (loaded)` → "media loaded, starting play()" → `play()` →
+`state 1` → `status 5 → 6 (buffered)` → **`state 2` (player auto-pauses)** → `Error
+Symbian:-14`. So -14 fires at the **output** stage, after a single, correctly-timed
+play(). Timing is ruled out.
+
+**Key correction:** the "Play tone" self-test never actually played on device — the log
+shows `SelfTestPage.qml:50: TypeError: 'audioEngine.setSource' is not a function`.
+`setSource` is a Q_PROPERTY WRITE accessor, **not callable from QML** (must assign the
+`source` property instead). So there was NO confirmed working audio output on this device;
+the earlier "MMF init OK" note was not from a real device run. The player path works in
+C++ only because PlayerController calls setSource() directly.
+
+Next step is diagnostic, not a -14 fix: fixed "Play tone" to assign `audioEngine.source`
+(callable) so we can learn whether a plain local PCM `.wav` plays through AudioEngine AT
+ALL. If the tone errors too → output is fundamentally broken on this device (investigate
+QMediaPlayer setup / capabilities / CMdaAudioPlayerUtility). If the tone plays → -14 is
+m4a/AAC-specific. Also fixed: playEpisode now `reset()`s the engine so repeat plays of the
+same eid reload (retry was sticking because setSource ignores an unchanged URL).
+
+**Resolved 2026-06-19:** `-14` was a wedged MMF audio-output state, **not** a code bug — the
+same build plays a real m4a fine after a phone reboot. See the 2026-06-19 entry above.
+
 ## 2026-06-14 — Virtual keyboard not opening for login text fields
 
 Symptom (Nokia X7, Belle): tapping the phone-number field on LoginPage did not raise
