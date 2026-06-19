@@ -101,6 +101,7 @@ XyzPageStackWindow {
             pageStack.clear();
             pageStack.push(loginPage);
         }
+        onSelfTestRequested: pageStack.push(selfTestPage)
     }
 
     UpdatesPage {

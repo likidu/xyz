@@ -55,7 +55,9 @@ SOURCES += \
     src/StorageManager.cpp \
     src/AudioEngine.cpp \
     src/AuthClient.cpp \
-    src/XyzApiClient.cpp
+    src/XyzApiClient.cpp \
+    src/EpisodeDownloader.cpp \
+    src/PlayerController.cpp
 
 HEADERS += \
     src/MemoryMonitor.h \
@@ -64,7 +66,9 @@ HEADERS += \
     src/StorageManager.h \
     src/AudioEngine.h \
     src/AuthClient.h \
-    src/XyzApiClient.h
+    src/XyzApiClient.h \
+    src/EpisodeDownloader.h \
+    src/PlayerController.h
 
 RESOURCES += \
     qml/qml.qrc
