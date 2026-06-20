@@ -136,8 +136,6 @@ void PlayerController::onDownloadProgress(qint64 received, qint64 total)
 
 void PlayerController::onDownloadFinished(const QString &localPath)
 {
-    if (!m_audio)
-        return;
     if (m_currentSourcePath != localPath) {
         m_currentSourcePath = localPath;
         emit currentSourcePathChanged();
@@ -151,6 +149,8 @@ void PlayerController::onDownloadFinished(const QString &localPath)
         return;
     }
 
+    if (!m_audio)
+        return;                    // only the play path needs audio
     setState(Preparing);
     qDebug() << "PlayerController: download ready, loading" << localPath;
     // Defer play() until the media is loaded. On Symbian, play()-before-loaded races
