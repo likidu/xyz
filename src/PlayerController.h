@@ -79,6 +79,7 @@ signals:
     void currentEidChanged();
     void currentTitleChanged();
     void currentSourcePathChanged();
+    void downloadDeleted();        // emitted when a (possibly deferred) delete completes
 
 private slots:
     void onDownloadProgress(qint64 received, qint64 total);
@@ -89,6 +90,7 @@ private slots:
     void onAudioPositionChanged();
     void onAudioDurationChanged();
     void onAudioErrorChanged();
+    void retryDelete();
 
 private:
     enum State { Idle = 0, Downloading = 1, Preparing = 2, Playing = 3, Paused = 4, Error = 5 };
@@ -109,6 +111,8 @@ private:
     QString m_currentEid;
     QString m_currentTitle;
     QString m_currentSourcePath;
+    QString m_pendingDeleteEid;  // file still being deleted (waiting for MMF to release it)
+    int m_deleteRetries;
 };
 
 #endif // PLAYERCONTROLLER_H

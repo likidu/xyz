@@ -308,5 +308,9 @@ qint64 EpisodeDownloader::cachedSizeBytes(const QString &eid)
 bool EpisodeDownloader::removeCached(const QString &eid)
 {
     const QString path = cachedPath(eid);
-    return path.isEmpty() ? false : QFile::remove(path);
+    if (path.isEmpty())
+        return false;
+    const bool ok = QFile::remove(path);
+    qDebug() << "EpisodeDownloader: removeCached" << path << (ok ? "OK" : "FAILED");
+    return ok;
 }

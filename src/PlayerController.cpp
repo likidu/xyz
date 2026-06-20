@@ -2,6 +2,7 @@
 #include "AudioEngine.h"
 
 #include <QtCore/QDebug>
+#include <QtCore/QTimer>
 
 PlayerController::PlayerController(AudioEngine *audio, QObject *parent)
     : QObject(parent)
@@ -10,6 +11,7 @@ PlayerController::PlayerController(AudioEngine *audio, QObject *parent)
     , m_downloadOnly(false)
     , m_state(Idle)
     , m_downloadProgress(0.0)
+    , m_deleteRetries(0)
 {
     connect(&m_downloader, SIGNAL(progress(qint64, qint64)),
             this, SLOT(onDownloadProgress(qint64, qint64)));
@@ -92,13 +94,42 @@ void PlayerController::deleteDownload(const QString &eid)
 {
     if (eid == m_currentEid) {
         m_downloader.cancel();
-        if (m_audio) m_audio->reset();
+        if (m_audio) m_audio->reset();   // release the file from MMF (async on Symbian)
         m_waitingToPlay = false;
         m_downloadOnly = false;
         setDownloadProgress(0.0);
         setState(Idle);
     }
-    m_downloader.removeCached(eid);
+    if (m_downloader.removeCached(eid)) {
+        emit downloadDeleted();
+        return;
+    }
+    // On Symbian the MMF server often still holds a just-played file, so QFile::remove
+    // fails right after reset(). Retry a few times until the handle is freed, then tell
+    // QML to refresh (so the CTA flips back to Download).
+    m_pendingDeleteEid = eid;
+    m_deleteRetries = 0;
+    QTimer::singleShot(300, this, SLOT(retryDelete()));
+}
+
+void PlayerController::retryDelete()
+{
+    if (m_pendingDeleteEid.isEmpty())
+        return;
+    if (m_downloader.removeCached(m_pendingDeleteEid)) {
+        qDebug() << "PlayerController: deferred delete OK" << m_pendingDeleteEid
+                 << "after" << m_deleteRetries << "retries";
+        m_pendingDeleteEid.clear();
+        emit downloadDeleted();
+        return;
+    }
+    if (++m_deleteRetries < 6) {
+        QTimer::singleShot(300, this, SLOT(retryDelete()));
+    } else {
+        qWarning() << "PlayerController: delete still failing (file locked?)" << m_pendingDeleteEid;
+        m_pendingDeleteEid.clear();
+        emit downloadDeleted();   // refresh the UI regardless
+    }
 }
 
 QString PlayerController::formatBytes(qint64 bytes)

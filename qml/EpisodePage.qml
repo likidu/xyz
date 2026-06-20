@@ -116,6 +116,8 @@ Page {
         target: player
         // When a download-only completes, state returns to Idle -> re-check the cache.
         onStateChanged: page.refreshDownloaded();
+        // When a (possibly deferred) delete actually removes the file -> re-check.
+        onDownloadDeleted: page.refreshDownloaded();
     }
 
     Rectangle { anchors.fill: parent; color: Theme.bg }
@@ -675,7 +677,6 @@ Page {
                             anchors.fill: parent
                             onClicked: {
                                 player.deleteDownload(page.eid);
-                                page.refreshDownloaded();
                                 page.confirmingDelete = false;
                             }
                         }
