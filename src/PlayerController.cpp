@@ -7,6 +7,7 @@ PlayerController::PlayerController(AudioEngine *audio, QObject *parent)
     : QObject(parent)
     , m_audio(audio)
     , m_waitingToPlay(false)
+    , m_downloadOnly(false)
     , m_state(Idle)
     , m_downloadProgress(0.0)
 {
@@ -54,6 +55,60 @@ void PlayerController::playEpisode(const QUrl &url, const QString &eid, const QS
     m_downloader.start(url, eid);
 }
 
+void PlayerController::download(const QUrl &url, const QString &eid)
+{
+    m_downloader.cancel();
+    m_waitingToPlay = false;
+    m_downloadOnly = true;              // do not auto-play when this finishes
+    if (m_currentEid != eid) { m_currentEid = eid; emit currentEidChanged(); }
+    setErrorString(QString());
+    setDownloadProgress(0.0);
+    setState(Downloading);
+    qDebug() << "PlayerController: download-only eid=" << eid << "url=" << url.toString();
+    m_downloader.start(url, eid);
+}
+
+void PlayerController::cancelDownload()
+{
+    m_downloader.cancel();
+    m_waitingToPlay = false;
+    m_downloadOnly = false;
+    setDownloadProgress(0.0);
+    setState(Idle);
+}
+
+bool PlayerController::isDownloaded(const QString &eid)
+{
+    return m_downloader.isCached(eid);
+}
+
+QString PlayerController::downloadedSizeText(const QString &eid)
+{
+    return formatBytes(m_downloader.cachedSizeBytes(eid));
+}
+
+void PlayerController::deleteDownload(const QString &eid)
+{
+    if (eid == m_currentEid) {
+        m_downloader.cancel();
+        if (m_audio) m_audio->reset();
+        m_waitingToPlay = false;
+        m_downloadOnly = false;
+        setDownloadProgress(0.0);
+        setState(Idle);
+    }
+    m_downloader.removeCached(eid);
+}
+
+QString PlayerController::formatBytes(qint64 bytes)
+{
+    if (bytes <= 0) return QString();
+    const double mb = double(bytes) / (1024.0 * 1024.0);
+    if (mb >= 1.0)
+        return QString::fromLatin1("%1 MB").arg(mb, 0, 'f', 1);
+    return QString::fromLatin1("%1 KB").arg(double(bytes) / 1024.0, 0, 'f', 0);
+}
+
 void PlayerController::pause()  { if (m_audio) m_audio->pause(); }
 void PlayerController::resume() { if (m_audio) m_audio->play(); }
 
@@ -88,6 +143,14 @@ void PlayerController::onDownloadFinished(const QString &localPath)
         emit currentSourcePathChanged();
     }
     setDownloadProgress(1.0);
+
+    if (m_downloadOnly) {
+        m_downloadOnly = false;
+        qDebug() << "PlayerController: download-only finished" << localPath;
+        setState(Idle);            // cached & ready; the page shows Play + on-device
+        return;
+    }
+
     setState(Preparing);
     qDebug() << "PlayerController: download ready, loading" << localPath;
     // Defer play() until the media is loaded. On Symbian, play()-before-loaded races

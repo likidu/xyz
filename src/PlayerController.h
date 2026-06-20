@@ -63,6 +63,13 @@ public:
     Q_INVOKABLE void stop();
     Q_INVOKABLE void seek(int positionMs);
 
+    // Two-step (download, then play) for the episode page.
+    Q_INVOKABLE void download(const QUrl &url, const QString &eid);  // download only
+    Q_INVOKABLE void cancelDownload();
+    Q_INVOKABLE bool isDownloaded(const QString &eid);
+    Q_INVOKABLE QString downloadedSizeText(const QString &eid);
+    Q_INVOKABLE void deleteDownload(const QString &eid);
+
 signals:
     void stateChanged();
     void downloadProgressChanged();
@@ -90,10 +97,12 @@ private:
     void setDownloadProgress(double p);
     void setErrorString(const QString &e);
     void maybeStartPlayback();
+    static QString formatBytes(qint64 bytes);
 
     AudioEngine *m_audio;
     EpisodeDownloader m_downloader;
     bool m_waitingToPlay;       // source set, deferring play() until media loads
+    bool m_downloadOnly;        // download() without auto-play
     int m_state;
     double m_downloadProgress;
     QString m_errorString;
