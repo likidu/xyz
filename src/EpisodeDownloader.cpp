@@ -271,3 +271,38 @@ QString EpisodeDownloader::extensionForUrl(const QUrl &url)
         return QLatin1Char('.') + suffix;
     return QLatin1String(".m4a");           // Xiaoyuzhou typically serves m4a
 }
+
+QString EpisodeDownloader::cachedPath(const QString &eid)
+{
+    const QString dir = audioDir();
+    if (dir.isEmpty() || eid.isEmpty())
+        return QString();
+    // The cached filename is <eid>.<ext>; the extension depends on the source URL,
+    // so match any non-.part file beginning with the eid. (audioDir() is a PUBLIC
+    // path, so entryList is reliable here -- unlike the /private data cage.)
+    QDir d(dir);
+    const QStringList hits = d.entryList(QStringList() << (eid + QLatin1String(".*")),
+                                         QDir::Files);
+    for (int i = 0; i < hits.size(); ++i) {
+        if (!hits.at(i).endsWith(QLatin1String(".part")))
+            return d.filePath(hits.at(i));
+    }
+    return QString();
+}
+
+bool EpisodeDownloader::isCached(const QString &eid)
+{
+    return !cachedPath(eid).isEmpty();
+}
+
+qint64 EpisodeDownloader::cachedSizeBytes(const QString &eid)
+{
+    const QString path = cachedPath(eid);
+    return path.isEmpty() ? 0 : QFileInfo(path).size();
+}
+
+bool EpisodeDownloader::removeCached(const QString &eid)
+{
+    const QString path = cachedPath(eid);
+    return path.isEmpty() ? false : QFile::remove(path);
+}

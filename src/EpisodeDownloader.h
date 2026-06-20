@@ -29,6 +29,13 @@ public:
     void start(const QUrl &url, const QString &eid);
     void cancel();
 
+    // Cache queries that do NOT start a transfer (drive the episode page's
+    // download/play state). cachedPath returns the existing <eid>.<ext> file or "".
+    QString cachedPath(const QString &eid);
+    bool isCached(const QString &eid);
+    qint64 cachedSizeBytes(const QString &eid);
+    bool removeCached(const QString &eid);
+
 signals:
     void progress(qint64 received, qint64 total);
     void finished(const QString &localPath);
