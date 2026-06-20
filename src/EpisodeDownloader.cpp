@@ -277,15 +277,19 @@ QString EpisodeDownloader::cachedPath(const QString &eid)
     const QString dir = audioDir();
     if (dir.isEmpty() || eid.isEmpty())
         return QString();
-    // The cached filename is <eid>.<ext>; the extension depends on the source URL,
-    // so match any non-.part file beginning with the eid. (audioDir() is a PUBLIC
-    // path, so entryList is reliable here -- unlike the /private data cage.)
+    // Probe known extensions by DIRECT file existence, not a QDir::entryList name-filter
+    // glob: on Symbian that glob is unreliable and matched unrelated files (it returned a
+    // stale clip for EVERY eid, so every episode looked already-downloaded). audioDir() is
+    // PUBLIC, so QFile::exists is trustworthy here (the cage caveat that makes exists() lie
+    // is /private only). Extensions mirror extensionForUrl().
     QDir d(dir);
-    const QStringList hits = d.entryList(QStringList() << (eid + QLatin1String(".*")),
-                                         QDir::Files);
-    for (int i = 0; i < hits.size(); ++i) {
-        if (!hits.at(i).endsWith(QLatin1String(".part")))
-            return d.filePath(hits.at(i));
+    static const char *const kExts[] = { ".m4a", ".mp3", ".aac", ".mp4", ".wav", ".ogg" };
+    for (uint i = 0; i < sizeof(kExts) / sizeof(kExts[0]); ++i) {
+        const QString p = d.filePath(eid + QLatin1String(kExts[i]));
+        if (QFile::exists(p)) {
+            qDebug() << "EpisodeDownloader: cachedPath hit" << eid << "->" << p;
+            return p;
+        }
     }
     return QString();
 }
