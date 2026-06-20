@@ -271,3 +271,42 @@ QString EpisodeDownloader::extensionForUrl(const QUrl &url)
         return QLatin1Char('.') + suffix;
     return QLatin1String(".m4a");           // Xiaoyuzhou typically serves m4a
 }
+
+QString EpisodeDownloader::cachedPath(const QString &eid)
+{
+    const QString dir = audioDir();
+    if (dir.isEmpty() || eid.isEmpty())
+        return QString();
+    // Probe known extensions by DIRECT file existence, not a QDir::entryList name-filter
+    // glob: on Symbian that glob is unreliable and matched unrelated files (it returned a
+    // stale clip for EVERY eid, so every episode looked already-downloaded). audioDir() is
+    // PUBLIC, so QFile::exists is trustworthy here (the cage caveat that makes exists() lie
+    // is /private only). Extensions mirror extensionForUrl().
+    QDir d(dir);
+    static const char *const kExts[] = { ".m4a", ".mp3", ".aac", ".mp4", ".wav", ".ogg" };
+    for (uint i = 0; i < sizeof(kExts) / sizeof(kExts[0]); ++i) {
+        const QString p = d.filePath(eid + QLatin1String(kExts[i]));
+        if (QFile::exists(p)) {
+            qDebug() << "EpisodeDownloader: cachedPath hit" << eid << "->" << p;
+            return p;
+        }
+    }
+    return QString();
+}
+
+bool EpisodeDownloader::isCached(const QString &eid)
+{
+    return !cachedPath(eid).isEmpty();
+}
+
+qint64 EpisodeDownloader::cachedSizeBytes(const QString &eid)
+{
+    const QString path = cachedPath(eid);
+    return path.isEmpty() ? 0 : QFileInfo(path).size();
+}
+
+bool EpisodeDownloader::removeCached(const QString &eid)
+{
+    const QString path = cachedPath(eid);
+    return path.isEmpty() ? false : QFile::remove(path);
+}
