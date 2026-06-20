@@ -94,7 +94,7 @@ void PlayerController::deleteDownload(const QString &eid)
 {
     if (eid == m_currentEid) {
         m_downloader.cancel();
-        if (m_audio) m_audio->reset();   // release the file from MMF (async on Symbian)
+        if (m_audio) m_audio->releaseFile();   // destroy+recreate player -> closes the file now
         m_waitingToPlay = false;
         m_downloadOnly = false;
         setDownloadProgress(0.0);

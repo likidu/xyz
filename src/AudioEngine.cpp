@@ -21,20 +21,7 @@ AudioEngine::AudioEngine(QObject *parent)
     m_player = new QMediaPlayer(this);
     if (m_player) {
         m_available = true;
-        connect(m_player, SIGNAL(stateChanged(QMediaPlayer::State)),
-                this, SLOT(onPlayerStateChanged()));
-        connect(m_player, SIGNAL(mediaStatusChanged(QMediaPlayer::MediaStatus)),
-                this, SLOT(onPlayerMediaStatusChanged()));
-        connect(m_player, SIGNAL(positionChanged(qint64)),
-                this, SLOT(onPlayerPositionChanged(qint64)));
-        connect(m_player, SIGNAL(durationChanged(qint64)),
-                this, SLOT(onPlayerDurationChanged(qint64)));
-        connect(m_player, SIGNAL(bufferStatusChanged(int)),
-                this, SLOT(onPlayerBufferStatusChanged(int)));
-        connect(m_player, SIGNAL(seekableChanged(bool)),
-                this, SLOT(onPlayerSeekableChanged(bool)));
-        connect(m_player, SIGNAL(error(QMediaPlayer::Error)),
-                this, SLOT(onPlayerError()));
+        wirePlayer();
         qDebug() << "AudioEngine: QMediaPlayer created successfully";
     } else {
         qDebug() << "AudioEngine: Failed to create QMediaPlayer";
@@ -206,6 +193,44 @@ void AudioEngine::reset()
     if (m_duration != 0) { m_duration = 0; emit durationChanged(); }
     if (m_bufferProgress != 0) { m_bufferProgress = 0; emit bufferProgressChanged(); }
     if (!m_errorString.isEmpty()) { m_errorString.clear(); emit errorStringChanged(); }
+}
+
+void AudioEngine::releaseFile()
+{
+    // Symbian: setMedia(empty) frees the open file only asynchronously, so an immediate
+    // QFile::remove on a just-played file fails (and timed retries are unreliable).
+    // Destroy + recreate the player so the MMF controller's destructor closes the file
+    // handle synchronously -- then a delete right after succeeds.
+    if (m_player) {
+        m_player->stop();
+        delete m_player;            // ~QMediaPlayer tears down MMF + closes the file now
+        m_player = 0;
+    }
+    m_player = new QMediaPlayer(this);
+    m_available = (m_player != 0);
+    wirePlayer();
+    qDebug() << "AudioEngine: player recreated to release the file";
+    reset();                        // clear source/state on the fresh player + emit
+}
+
+void AudioEngine::wirePlayer()
+{
+    if (!m_player)
+        return;
+    connect(m_player, SIGNAL(stateChanged(QMediaPlayer::State)),
+            this, SLOT(onPlayerStateChanged()));
+    connect(m_player, SIGNAL(mediaStatusChanged(QMediaPlayer::MediaStatus)),
+            this, SLOT(onPlayerMediaStatusChanged()));
+    connect(m_player, SIGNAL(positionChanged(qint64)),
+            this, SLOT(onPlayerPositionChanged(qint64)));
+    connect(m_player, SIGNAL(durationChanged(qint64)),
+            this, SLOT(onPlayerDurationChanged(qint64)));
+    connect(m_player, SIGNAL(bufferStatusChanged(int)),
+            this, SLOT(onPlayerBufferStatusChanged(int)));
+    connect(m_player, SIGNAL(seekableChanged(bool)),
+            this, SLOT(onPlayerSeekableChanged(bool)));
+    connect(m_player, SIGNAL(error(QMediaPlayer::Error)),
+            this, SLOT(onPlayerError()));
 }
 
 void AudioEngine::prepareForNewSource()

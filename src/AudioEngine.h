@@ -83,6 +83,7 @@ public:
     Q_INVOKABLE void stop();
     Q_INVOKABLE void seek(int positionMs);
     Q_INVOKABLE void reset();
+    Q_INVOKABLE void releaseFile();   // destroy+recreate the player to close the open file now (Symbian)
     Q_INVOKABLE void prepareForNewSource();
     Q_INVOKABLE void ensureImpl(); // no-op, for PlaybackController compat
 
@@ -110,6 +111,7 @@ private slots:
     void onPlayerError();
 
 private:
+    void wirePlayer();          // connect m_player's signals (used by ctor + releaseFile)
     int mapState() const;
     int mapStatus() const;
     void applyPendingSeek();
