@@ -123,10 +123,13 @@ Page {
     BelleHeader {
         id: header
         title: qsTr("Episode")
+        // delete lives in the top banner — shown only when the episode is downloaded
+        actionIconSource: page.downloaded ? "gfx/icon-trash-white.svg" : ""
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
         onBackClicked: pageStack.pop()
+        onActionClicked: page.confirmingDelete = true
     }
 
     Flickable {
@@ -342,7 +345,7 @@ Page {
                     MouseArea { anchors.fill: parent; onClicked: player.pause() }
                 }
 
-                // on-device status + delete (under the button when cached)
+                // saved-locally status (delete moved to the header trash action)
                 Row {
                     id: dlStatus
                     visible: page.ctaStatusVisible()
@@ -350,21 +353,8 @@ Page {
                     anchors.top: parent.top; anchors.topMargin: 60
                     spacing: 6
                     Image { source: "gfx/icon-check.svg"; width: 14; height: 14; smooth: true; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: qsTr("On device"); font.pixelSize: 12; color: Theme.accentBright; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: qsTr("Saved to phone memory"); font.pixelSize: 12; color: Theme.accentBright; anchors.verticalCenter: parent.verticalCenter }
                     Text { visible: page.downloadedSize !== ""; text: "\xB7 " + page.downloadedSize; font.pixelSize: 12; color: Theme.textDim; anchors.verticalCenter: parent.verticalCenter }
-                }
-                Item {
-                    id: dlDelete
-                    visible: page.ctaStatusVisible()
-                    anchors.right: parent.right; anchors.rightMargin: 8
-                    anchors.verticalCenter: dlStatus.verticalCenter
-                    width: delRow.width + 24; height: 44
-                    Row {
-                        id: delRow; anchors.centerIn: parent; spacing: 5
-                        Image { source: "gfx/icon-trash.svg"; width: 14; height: 14; smooth: true; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: qsTr("Delete"); font.pixelSize: 12; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
-                    }
-                    MouseArea { anchors.fill: parent; onClicked: page.confirmingDelete = true }
                 }
             }
 
@@ -588,7 +578,7 @@ Page {
                         anchors.left: parent.left
                         anchors.leftMargin: 16
                         anchors.verticalCenter: parent.verticalCenter
-                        text: qsTr("Delete download")
+                        text: qsTr("Delete download?")
                         font.pixelSize: 15
                         font.bold: true
                         color: Theme.text
@@ -613,7 +603,7 @@ Page {
                         anchors.leftMargin: 16
                         anchors.rightMargin: 16
                         anchors.verticalCenter: parent.verticalCenter
-                        text: qsTr("Remove the downloaded audio from this device? You can download it again anytime.")
+                        text: qsTr("This removes the audio file from phone memory. You can download it again anytime.")
                         font.pixelSize: 13
                         color: Theme.textDim
                         wrapMode: Text.WordWrap
