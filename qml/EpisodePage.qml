@@ -27,7 +27,7 @@ Page {
     // ---- download/play CTA state ----
     property bool downloaded: false
     property string downloadedSize: ""
-    property string mode: page.ctaMode()
+    property string mode: "download"   // set only via refreshDownloaded() (no cross-function binding)
 
     // ---- filled from the fetched detail ----
     property string showTitle: ""
@@ -53,6 +53,7 @@ Page {
         page.detailLoaded = false;
         page.downloaded = false;
         page.downloadedSize = "";
+        page.refreshDownloaded();   // correct CTA state on first paint (before push)
     }
 
     function subLine() {
