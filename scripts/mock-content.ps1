@@ -35,7 +35,9 @@ $episode = @{ code=200; msg="OK"; data=@{
   description="When we look up at the night sky, what are we really searching for? This episode drifts from the first telescope of childhood all the way to dark matter, the Fermi paradox, and that strange feeling of being small yet somehow healed.";
   duration=6900; pubDate="2026-06-12T18:00:00.000Z"; playCount=7941; commentCount=128;
   image=@{ thumbnailUrl=$img; smallPicUrl=$img; middlePicUrl=$img };
-  podcast=@{ pid="p1"; title="Cosmic Drift"; image=@{ smallPicUrl=$img; thumbnailUrl=$img } }
+  podcast=@{ pid="p1"; title="Cosmic Drift"; image=@{ smallPicUrl=$img; thumbnailUrl=$img } };
+  enclosure=@{ url="http://localhost:8099/audio/e2.wav" };
+  media=@{ size=3236; mimeType="audio/wav"; source=@{ url="http://localhost:8099/audio/e2.wav"; mode="PUBLIC" } };
 } } | ConvertTo-Json -Depth 8
 
 # comment/list-primary returns the comment array under "data" + a totalCount.
@@ -51,9 +53,30 @@ $comments = @{ code=200; msg="OK"; totalCount=128; data=@(
      author=@{ nickname="Pico"; avatar=@{ picture=@{ thumbnailUrl=$img } } } }
 ) } | ConvertTo-Json -Depth 8
 
+# Minimal 0.4s mono 8kHz 8-bit PCM WAV (~3.2KB) so the download+play loop is testable.
+function New-SilenceWav {
+  $sr=8000; $secs=0.4; $n=[int]($sr*$secs)
+  $ms=New-Object System.IO.MemoryStream
+  $bw=New-Object System.IO.BinaryWriter($ms)
+  $bw.Write([Text.Encoding]::ASCII.GetBytes("RIFF")); $bw.Write([int](36+$n))
+  $bw.Write([Text.Encoding]::ASCII.GetBytes("WAVE")); $bw.Write([Text.Encoding]::ASCII.GetBytes("fmt "))
+  $bw.Write([int]16); $bw.Write([int16]1); $bw.Write([int16]1)
+  $bw.Write([int]$sr); $bw.Write([int]$sr); $bw.Write([int16]1); $bw.Write([int16]8)
+  $bw.Write([Text.Encoding]::ASCII.GetBytes("data")); $bw.Write([int]$n)
+  for ($i=0;$i -lt $n;$i++){ $bw.Write([byte]128) }   # 128 = silence for 8-bit PCM
+  $bw.Flush(); return $ms.ToArray()
+}
+$wav = New-SilenceWav
+
 while ($listener.IsListening) {
   $ctx = $listener.GetContext()
   $path = $ctx.Request.Url.AbsolutePath
+  if ($path -like "*/audio/*") {
+    $ctx.Response.ContentType = "audio/wav"
+    $ctx.Response.OutputStream.Write($wav, 0, $wav.Length)
+    $ctx.Response.Close()
+    continue
+  }
   $body = if ($path -like "*subscription*") { $subs }
           elseif ($path -like "*episode*") { $episode }
           elseif ($path -like "*comment*") { $comments }

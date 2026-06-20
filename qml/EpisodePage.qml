@@ -20,6 +20,16 @@ Page {
     property string durationText: ""
     property string whenText: ""
 
+    // ---- seeded from episode detail fetch (not inbox item) ----
+    property string audioUrl: ""
+    property string audioSizeText: ""
+
+    // ---- download/play CTA state ----
+    property bool downloaded: false
+    property string downloadedSize: ""
+    property string mode: "download"   // set only via refreshDownloaded() (no cross-function binding)
+    property bool confirmingDelete: false
+
     // ---- filled from the fetched detail ----
     property string showTitle: ""
     property string notes: ""
@@ -35,11 +45,17 @@ Page {
         page.durationText = item.durationText;
         page.whenText = item.whenText;
         // clear fetched fields so the previous episode never lingers behind a load
+        page.audioUrl = "";
+        page.audioSizeText = "";
         page.showTitle = "";
         page.notes = "";
         page.commentCountText = "";
         page.commentModel = [];
         page.detailLoaded = false;
+        page.downloaded = false;
+        page.downloadedSize = "";
+        page.confirmingDelete = false;
+        page.refreshDownloaded();   // correct CTA state on first paint (before push)
     }
 
     function subLine() {
@@ -49,9 +65,32 @@ Page {
         return page.durationText + page.whenText;
     }
 
+    function refreshDownloaded() {
+        page.downloaded = (page.eid !== "" && player.isDownloaded(page.eid));
+        page.downloadedSize = page.downloaded ? player.downloadedSizeText(page.eid) : "";
+        page.mode = page.ctaMode();
+    }
+
+    function ctaMode() {
+        if (player.currentEid === page.eid) {
+            if (player.state === player.downloadingState) return "downloading";
+            if (player.state === player.preparingState) return "preparing";
+            if (player.state === player.playingState) return "playing";
+            if (player.state === player.pausedState) return "paused";
+        }
+        return page.downloaded ? "ready" : "download";
+    }
+
+    function ctaStatusVisible() {
+        return page.downloaded && page.mode !== "download" && page.mode !== "downloading";
+    }
+
     onStatusChanged: {
         if (status === PageStatus.Active && page.eid !== "" && !page.detailLoaded) {
             xyzApi.fetchEpisode(page.eid);
+        }
+        if (status === PageStatus.Active) {
+            page.refreshDownloaded();
         }
     }
 
@@ -63,6 +102,8 @@ Page {
             page.showTitle = xyzApi.episode.showTitle;
             page.notes = xyzApi.episode.notes;
             page.commentCountText = xyzApi.episode.commentCount;
+            page.audioUrl = xyzApi.episode.audioUrl;
+            page.audioSizeText = xyzApi.episode.audioSizeText;
             page.detailLoaded = true;
             xyzApi.fetchComments(page.eid);
         }
@@ -71,15 +112,24 @@ Page {
         }
     }
 
+    Connections {
+        target: player
+        // When a download-only completes, state returns to Idle -> re-check the cache.
+        onStateChanged: page.refreshDownloaded();
+    }
+
     Rectangle { anchors.fill: parent; color: Theme.bg }
 
     BelleHeader {
         id: header
         title: qsTr("Episode")
+        // delete lives in the top banner — shown only when the episode is downloaded
+        actionIconSource: page.downloaded ? "gfx/icon-trash-white.svg" : ""
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
         onBackClicked: pageStack.pop()
+        onActionClicked: page.confirmingDelete = true
     }
 
     Flickable {
@@ -160,43 +210,151 @@ Page {
                 }
             }
 
-            // ---- Play CTA (inert — player deferred) ----
+            // ---- download / play CTA ----
             Item {
+                id: ctaWrap
                 width: contentCol.width
-                height: 66
+                height: page.ctaStatusVisible() ? 100 : 66
 
+                // (a) not cached -> Download
                 Rectangle {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.leftMargin: 14
-                    anchors.rightMargin: 14
-                    anchors.top: parent.top
-                    anchors.topMargin: 6
-                    height: 46
-                    radius: 6
+                    visible: page.mode === "download"
+                    anchors.left: parent.left; anchors.right: parent.right
+                    anchors.leftMargin: 14; anchors.rightMargin: 14
+                    anchors.top: parent.top; anchors.topMargin: 6
+                    height: 46; radius: 6
+                    color: Theme.panel2
+                    border.width: 1; border.color: Theme.accent
+                    Row {
+                        anchors.centerIn: parent; spacing: 8
+                        Image { source: "gfx/icon-download.svg"; width: 20; height: 20; smooth: true; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: page.audioSizeText !== "" ? qsTr("Download") + "  ·  " + page.audioSizeText : qsTr("Download"); font.pixelSize: 15; font.bold: true; color: Theme.accentBright; anchors.verticalCenter: parent.verticalCenter }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: page.audioUrl !== ""
+                        onClicked: player.download(page.audioUrl, page.eid)
+                    }
+                }
+
+                // (b) downloading -> progress + cancel
+                Rectangle {
+                    visible: page.mode === "downloading"
+                    anchors.left: parent.left; anchors.right: parent.right
+                    anchors.leftMargin: 14; anchors.rightMargin: 14
+                    anchors.top: parent.top; anchors.topMargin: 6
+                    height: 46; radius: 6; clip: true
+                    color: Theme.panel
+                    border.width: 1; border.color: Theme.hairlineStrong
+                    Rectangle {
+                        anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom
+                        width: parent.width * player.downloadProgress
+                        color: Theme.accentDeep
+                    }
+                    Text {
+                        anchors.left: parent.left; anchors.leftMargin: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: qsTr("Downloading"); font.pixelSize: 15; font.bold: true; color: Theme.text
+                    }
+                    Text {
+                        id: dlPct
+                        anchors.right: dlCancel.left; anchors.rightMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Math.round(player.downloadProgress * 100) + "%"
+                        font.pixelSize: 13; color: Theme.accentBright
+                    }
+                    Item {
+                        id: dlCancel
+                        width: 48; height: parent.height
+                        anchors.right: parent.right; anchors.top: parent.top
+                        Image {
+                            source: "gfx/icon-x.svg"; width: 14; height: 14; smooth: true
+                            anchors.centerIn: parent
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: { player.cancelDownload(); page.refreshDownloaded(); }
+                        }
+                    }
+                }
+
+                // (c) cached, idle/paused/preparing -> Play / Resume
+                Rectangle {
+                    visible: page.mode === "ready" || page.mode === "paused" || page.mode === "preparing"
+                    anchors.left: parent.left; anchors.right: parent.right
+                    anchors.leftMargin: 14; anchors.rightMargin: 14
+                    anchors.top: parent.top; anchors.topMargin: 6
+                    height: 46; radius: 6
                     gradient: Gradient {
                         GradientStop { position: 0.0; color: Theme.accentBright }
                         GradientStop { position: 1.0; color: Theme.accentDeep }
                     }
-
                     Row {
-                        anchors.centerIn: parent
-                        spacing: 10
-                        Image {
-                            source: "gfx/icon-play-white.svg"
-                            width: 22
-                            height: 22
-                            smooth: true
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
+                        anchors.centerIn: parent; spacing: 10
+                        Image { source: "gfx/icon-play-white.svg"; width: 22; height: 22; smooth: true; anchors.verticalCenter: parent.verticalCenter }
                         Text {
-                            text: qsTr("Play")
-                            font.pixelSize: 15
-                            font.bold: true
-                            color: "#ffffff"
-                            anchors.verticalCenter: parent.verticalCenter
+                            text: page.mode === "paused" ? qsTr("Resume") : (page.mode === "preparing" ? qsTr("Loading…") : qsTr("Play"))
+                            font.pixelSize: 15; font.bold: true; color: "#ffffff"; anchors.verticalCenter: parent.verticalCenter
                         }
                     }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            if (page.mode === "paused") player.resume();
+                            else if (page.mode === "ready") player.playEpisode(page.audioUrl, page.eid, page.epTitle);
+                        }
+                    }
+                }
+
+                // (d) playing -> equalizer (tap to pause)
+                Rectangle {
+                    id: playingBtn
+                    visible: page.mode === "playing"
+                    anchors.left: parent.left; anchors.right: parent.right
+                    anchors.leftMargin: 14; anchors.rightMargin: 14
+                    anchors.top: parent.top; anchors.topMargin: 6
+                    height: 46; radius: 6
+                    color: "#338b6dff"
+                    border.width: 1; border.color: Theme.accent
+                    Text {
+                        id: playingLabel
+                        anchors.centerIn: parent; anchors.horizontalCenterOffset: -14
+                        text: qsTr("Playing"); font.pixelSize: 15; font.bold: true; color: Theme.accentBright
+                    }
+                    Item {
+                        id: eq
+                        width: 17; height: 15
+                        anchors.left: playingLabel.right; anchors.leftMargin: 9
+                        anchors.verticalCenter: parent.verticalCenter
+                        Repeater {
+                            model: 4
+                            Rectangle {
+                                width: 3; radius: 1; color: Theme.accentBright
+                                x: index * 5
+                                anchors.bottom: parent.bottom
+                                height: 5
+                                SequentialAnimation on height {
+                                    running: page.mode === "playing"
+                                    loops: Animation.Infinite
+                                    NumberAnimation { to: 14; duration: 320 + index * 70; easing.type: Easing.InOutSine }
+                                    NumberAnimation { to: 5;  duration: 320 + index * 70; easing.type: Easing.InOutSine }
+                                }
+                            }
+                        }
+                    }
+                    MouseArea { anchors.fill: parent; onClicked: player.pause() }
+                }
+
+                // saved-locally status (delete moved to the header trash action)
+                Row {
+                    id: dlStatus
+                    visible: page.ctaStatusVisible()
+                    anchors.left: parent.left; anchors.leftMargin: 14
+                    anchors.top: parent.top; anchors.topMargin: 60
+                    spacing: 6
+                    Image { source: "gfx/icon-check.svg"; width: 14; height: 14; smooth: true; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: qsTr("Saved to phone memory"); font.pixelSize: 12; color: Theme.accentBright; anchors.verticalCenter: parent.verticalCenter }
+                    Text { visible: page.downloadedSize !== ""; text: "\xB7 " + page.downloadedSize; font.pixelSize: 12; color: Theme.textDim; anchors.verticalCenter: parent.verticalCenter }
                 }
             }
 
@@ -374,5 +532,156 @@ Page {
         font.pixelSize: 13
         wrapMode: Text.WordWrap
         horizontalAlignment: Text.AlignHCenter
+    }
+
+    // ---- delete-download confirmation (design: .scrim / .dialog / .dlg-btn) ----
+    Item {
+        id: confirmDelete
+        anchors.fill: parent
+        visible: page.confirmingDelete
+        z: 100
+
+        Rectangle {
+            anchors.fill: parent
+            color: "#99000000"
+            MouseArea { anchors.fill: parent; onClicked: page.confirmingDelete = false }
+        }
+
+        Rectangle {
+            id: dlg
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: 24
+            anchors.rightMargin: 24
+            anchors.verticalCenter: parent.verticalCenter
+            height: dlgCol.height
+            radius: 9
+            clip: true
+            color: Theme.panel2
+            border.width: 1
+            border.color: Theme.hairlineStrong
+
+            Column {
+                id: dlgCol
+                width: dlg.width
+
+                // title bar (glossy chrome)
+                Item {
+                    width: parent.width
+                    height: 44
+                    Rectangle {
+                        anchors.fill: parent
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: Theme.chromeHi }
+                            GradientStop { position: 1.0; color: Theme.chromeLo }
+                        }
+                    }
+                    Text {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: qsTr("Delete download?")
+                        font.pixelSize: 15
+                        font.bold: true
+                        color: Theme.text
+                    }
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        height: 1
+                        color: "#000000"
+                    }
+                }
+
+                // message
+                Item {
+                    width: parent.width
+                    height: msgText.height + 32
+                    Text {
+                        id: msgText
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: qsTr("This removes the audio file from phone memory. You can download it again anytime.")
+                        font.pixelSize: 13
+                        color: Theme.textDim
+                        wrapMode: Text.WordWrap
+                    }
+                }
+
+                // actions: Cancel / Delete
+                Item {
+                    width: parent.width
+                    height: 62
+
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 16
+                        anchors.top: parent.top
+                        width: (parent.width - 42) / 2
+                        height: 46
+                        radius: 7
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: "#2c2c33" }
+                            GradientStop { position: 1.0; color: "#1a1a1f" }
+                        }
+                        border.width: 1
+                        border.color: Theme.hairlineStrong
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Cancel")
+                            font.pixelSize: 15
+                            font.weight: Font.DemiBold
+                            color: Theme.text
+                        }
+                        MouseArea { anchors.fill: parent; onClicked: page.confirmingDelete = false }
+                    }
+
+                    Rectangle {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 16
+                        anchors.top: parent.top
+                        width: (parent.width - 42) / 2
+                        height: 46
+                        radius: 7
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: "#e0564f" }
+                            GradientStop { position: 1.0; color: "#b8362f" }
+                        }
+                        border.width: 1
+                        border.color: "#7c1f1a"
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 7
+                            Image {
+                                source: "gfx/icon-trash-white.svg"
+                                width: 16
+                                height: 16
+                                smooth: true
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                text: qsTr("Delete")
+                                font.pixelSize: 15
+                                font.weight: Font.DemiBold
+                                color: "#ffffff"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                player.deleteDownload(page.eid);
+                                page.refreshDownloaded();
+                                page.confirmingDelete = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

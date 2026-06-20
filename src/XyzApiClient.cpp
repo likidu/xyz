@@ -15,6 +15,13 @@
 
 namespace {
 
+QString formatBytesShort(qint64 bytes) {
+    if (bytes <= 0) return QString();
+    const double mb = double(bytes) / (1024.0 * 1024.0);
+    if (mb >= 1.0) return QString::fromLatin1("%1 MB").arg(mb, 0, 'f', 1);
+    return QString::fromLatin1("%1 KB").arg(double(bytes) / 1024.0, 0, 'f', 0);
+}
+
 QByteArray contentBase()
 {
     const QByteArray override = qgetenv("XYZ_API_BASE");
@@ -480,6 +487,17 @@ QVariantMap XyzApiClient::shapeEpisode(const QVariantMap &item) const
                relativeTime(item.value(QString::fromLatin1("pubDate")).toString()));
     out.insert(QString::fromLatin1("commentCount"),
                QString::number(item.value(QString::fromLatin1("commentCount")).toInt()));
+
+    // Audio enclosure URL (+ reliable byte size from media) for the download/play CTA.
+    const QVariantMap media = item.value(QString::fromLatin1("media")).toMap();
+    QString audioUrl = item.value(QString::fromLatin1("enclosure")).toMap()
+                           .value(QString::fromLatin1("url")).toString();
+    if (audioUrl.isEmpty())
+        audioUrl = media.value(QString::fromLatin1("source")).toMap()
+                       .value(QString::fromLatin1("url")).toString();
+    out.insert(QString::fromLatin1("audioUrl"), audioUrl);
+    out.insert(QString::fromLatin1("audioSizeText"),
+               formatBytesShort(media.value(QString::fromLatin1("size")).toLongLong()));
 
     return out;
 }

@@ -3,6 +3,31 @@ Symbian Belle Device Notes
 
 Hardware: Nokia C7 (Belle FP2)
 
+## 2026-06-19 — Episode page two-step Download→Play works on device (+ a QDir::entryList glob trap)
+
+Result: the episode page's two-step **Download → Play** is **device-verified** — an
+undownloaded episode shows "Download · <size>", tapping downloads with progress, then
+"On device · <size>" + Play plays the cached `.m4a`. Download/play reuse the
+device-verified PlayerController/EpisodeDownloader stack (so the MMF `-14`/reboot caveat
+from the entry below still applies to playback itself).
+
+**Bug found on device (not in the simulator):** every episode opened straight to the
+**Play** state with nothing actually downloaded, and the file system showed no per-episode
+files. Cause: the new cache check `EpisodeDownloader::cachedPath()` resolved the cached
+file with `QDir::entryList(QStringList() << eid + ".*", QDir::Files)`. **On Symbian that
+name-filter glob is unreliable** — it returned the one stale clip in the audio dir
+(`C:/Data/Xyz/audio/selftest.m4a`, left over from the player self-test) for **every** eid,
+so `isDownloaded(eid)` was always true. (It never reproduced in the Qt Simulator because
+MinGW's `entryList` filters correctly; and a build + QML-log check passes without ever
+exercising the flow — only an interactive run catches it.)
+
+Fix: probe known extensions by **direct `QFile::exists("<eid>.m4a"|.mp3|...)`** instead of
+the glob. This is the same lesson as the data-cage notes below — **don't trust `QDir`
+listing/`exists()` semantics on Symbian; do a direct, specific I/O check.** (audioDir() is
+a PUBLIC path, so `QFile::exists` there is reliable; the cage caveat is `/private` only.)
+Note the bug would also have struck after any real download — one cached file made *all*
+episodes read as downloaded — so it was a true defect, not just stale-state.
+
 ## 2026-06-19 — Player: real m4a download+play works on device — the -14 was a stuck MMF, cleared by reboot
 
 Result: the Self-test "Player" download → play of a **real downloaded Xiaoyuzhou `.m4a`**
