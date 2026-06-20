@@ -8,7 +8,7 @@ Page {
     id: page
     objectName: "HomePage"
 
-    property bool hidesToolBar: false
+    property bool hidesToolBar: true
     property string nickname: ""
     property string uid: ""
     property string phoneLabel: ""
@@ -16,6 +16,7 @@ Page {
 
     signal signedOut
     signal selfTestRequested
+    signal tabSelected(int index)
 
     function reload() {
         nickname = storage.value("auth.nickname", "");
@@ -146,5 +147,14 @@ Page {
                 onClicked: page.selfTestRequested()
             }
         }
+    }
+
+    BelleTabBar {
+        id: tabBar
+        activeIndex: 3
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        onTabSelected: page.tabSelected(index)
     }
 }

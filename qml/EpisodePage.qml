@@ -214,7 +214,8 @@ Page {
                     anchors.leftMargin: 14
                     anchors.rightMargin: 14
                     text: page.notes
-                    font.pixelSize: 15
+                    font.pixelSize: 17
+                    lineHeight: 1.62
                     color: Theme.textBody
                     wrapMode: Text.WordWrap
                 }
@@ -304,14 +305,15 @@ Page {
                             Text {
                                 width: parent.width
                                 text: modelData.loc.length > 0 ? modelData.name + "  ·  " + modelData.loc : modelData.name
-                                font.pixelSize: 13
+                                font.pixelSize: 14
                                 color: Theme.textDim
                                 elide: Text.ElideRight
                             }
                             Text {
                                 width: parent.width
                                 text: modelData.text
-                                font.pixelSize: 15
+                                font.pixelSize: 16
+                                lineHeight: 1.55
                                 color: Theme.text
                                 wrapMode: Text.WordWrap
                             }

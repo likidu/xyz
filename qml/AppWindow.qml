@@ -96,12 +96,12 @@ XyzPageStackWindow {
 
     HomePage {
         id: homePage
-        tools: toolBarLayout
         onSignedOut: {
             pageStack.clear();
             pageStack.push(loginPage);
         }
         onSelfTestRequested: pageStack.push(selfTestPage)
+        onTabSelected: window.handleTab(index)
     }
 
     UpdatesPage {
