@@ -779,3 +779,64 @@ git commit -m "docs: device notes for episode two-step download->play"
 **Type consistency:** `download/cancelDownload/isDownloaded/downloadedSizeText/deleteDownload` and `cachedPath/isCached/cachedSizeBytes/removeCached` are used identically across Tasks 4/5/7. `mode` strings ("download"/"downloading"/"preparing"/"playing"/"paused"/"ready") match between `ctaMode`, `ctaStatusVisible`, and the CTA `visible` bindings.
 
 **Placeholder scan:** none — every code step shows complete code. The only conditional is Task 1→3 (`enclosure.url` path), which has an explicit default and an adjust-if-different instruction.
+
+---
+
+## Addendum — Task 1 findings (SUPERSEDES Tasks 2/3/7 where they conflict)
+
+Live `episode/get` shape confirmed (cached real response):
+```json
+"enclosure": { "url": "https://media.xyzcdn.net/<id>.m4a" },
+"media": { "size": 98774871, "mimeType": "audio/mp4",
+           "source": { "url": "https://media.xyzcdn.net/<id>.m4a", "mode": "PUBLIC" } }
+```
+Key correction: **the audio URL and size live on episode detail only — NOT on inbox-list items.**
+
+**Task 2 (mock) — revised:** Do NOT add `enclosure` to inbox items. Add `enclosure` + `media` to the `$episode` (`data` map) object only:
+```powershell
+  duration=6900; pubDate="2026-06-12T18:00:00.000Z"; playCount=7941; commentCount=128;
+  enclosure=@{ url="http://localhost:8099/audio/e2.wav" };
+  media=@{ size=3236; mimeType="audio/wav"; source=@{ url="http://localhost:8099/audio/e2.wav"; mode="PUBLIC" } };
+  image=@{ thumbnailUrl=$img; smallPicUrl=$img; middlePicUrl=$img };
+```
+(WAV-serving + the `/audio/*` branch are unchanged. `size=3236` ≈ the generated WAV so pre/post sizes agree.)
+
+**Task 3 (XyzApiClient) — revised:** Do NOT modify `shapeInboxItem`. In `shapeEpisode` only, before `return out;`:
+```cpp
+    // Audio enclosure URL (+ reliable byte size from media) for the download/play CTA.
+    const QVariantMap media = item.value(QString::fromLatin1("media")).toMap();
+    QString audioUrl = item.value(QString::fromLatin1("enclosure")).toMap()
+                           .value(QString::fromLatin1("url")).toString();
+    if (audioUrl.isEmpty())
+        audioUrl = media.value(QString::fromLatin1("source")).toMap()
+                       .value(QString::fromLatin1("url")).toString();
+    out.insert(QString::fromLatin1("audioUrl"), audioUrl);
+    out.insert(QString::fromLatin1("audioSizeText"),
+               formatBytesShort(media.value(QString::fromLatin1("size")).toLongLong()));
+```
+Add a small file-local helper near the top of `XyzApiClient.cpp` (anonymous namespace):
+```cpp
+namespace {
+QString formatBytesShort(qint64 bytes) {
+    if (bytes <= 0) return QString();
+    const double mb = double(bytes) / (1024.0 * 1024.0);
+    if (mb >= 1.0) return QString::fromLatin1("%1 MB").arg(mb, 0, 'f', 1);
+    return QString::fromLatin1("%1 KB").arg(double(bytes) / 1024.0, 0, 'f', 0);
+}
+}
+```
+
+**Task 7 (EpisodePage) — revised:** `audioUrl`/`audioSizeText` come from the **episode detail fetch**, not `openWith`:
+- Add properties `audioUrl`, `audioSizeText` (string), plus the `downloaded`/`downloadedSize`/`mode` from Task 7.
+- In `openWith(item)`: do NOT set `audioUrl` from the item; instead reset `page.audioUrl = ""` and `page.audioSizeText = ""` with the other cleared fetch fields.
+- In the existing `Connections { target: xyzApi } onEpisodeLoaded`, add:
+  ```qml
+  page.audioUrl = xyzApi.episode.audioUrl;
+  page.audioSizeText = xyzApi.episode.audioSizeText;
+  ```
+- The idle Download button shows the size when known — replace its label Row's `Text` with:
+  ```qml
+  Text { text: page.audioSizeText !== "" ? qsTr("Download") + "  ·  " + page.audioSizeText : qsTr("Download");
+         font.pixelSize: 15; font.bold: true; color: Theme.accentBright; anchors.verticalCenter: parent.verticalCenter }
+  ```
+- The Download MouseArea stays gated on `page.audioUrl !== ""` (so it's inert until detail loads). Everything else in Task 7 is unchanged.
