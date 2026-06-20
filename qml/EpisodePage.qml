@@ -28,6 +28,7 @@ Page {
     property bool downloaded: false
     property string downloadedSize: ""
     property string mode: "download"   // set only via refreshDownloaded() (no cross-function binding)
+    property bool confirmingDelete: false
 
     // ---- filled from the fetched detail ----
     property string showTitle: ""
@@ -53,6 +54,7 @@ Page {
         page.detailLoaded = false;
         page.downloaded = false;
         page.downloadedSize = "";
+        page.confirmingDelete = false;
         page.refreshDownloaded();   // correct CTA state on first paint (before push)
     }
 
@@ -356,13 +358,13 @@ Page {
                     visible: page.ctaStatusVisible()
                     anchors.right: parent.right; anchors.rightMargin: 8
                     anchors.verticalCenter: dlStatus.verticalCenter
-                    width: delRow.width + 16; height: 36
+                    width: delRow.width + 24; height: 44
                     Row {
                         id: delRow; anchors.centerIn: parent; spacing: 5
                         Image { source: "gfx/icon-trash.svg"; width: 14; height: 14; smooth: true; anchors.verticalCenter: parent.verticalCenter }
                         Text { text: qsTr("Delete"); font.pixelSize: 12; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
                     }
-                    MouseArea { anchors.fill: parent; onClicked: { player.deleteDownload(page.eid); page.refreshDownloaded(); } }
+                    MouseArea { anchors.fill: parent; onClicked: page.confirmingDelete = true }
                 }
             }
 
@@ -538,5 +540,156 @@ Page {
         font.pixelSize: 13
         wrapMode: Text.WordWrap
         horizontalAlignment: Text.AlignHCenter
+    }
+
+    // ---- delete-download confirmation (design: .scrim / .dialog / .dlg-btn) ----
+    Item {
+        id: confirmDelete
+        anchors.fill: parent
+        visible: page.confirmingDelete
+        z: 100
+
+        Rectangle {
+            anchors.fill: parent
+            color: "#99000000"
+            MouseArea { anchors.fill: parent; onClicked: page.confirmingDelete = false }
+        }
+
+        Rectangle {
+            id: dlg
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: 24
+            anchors.rightMargin: 24
+            anchors.verticalCenter: parent.verticalCenter
+            height: dlgCol.height
+            radius: 9
+            clip: true
+            color: Theme.panel2
+            border.width: 1
+            border.color: Theme.hairlineStrong
+
+            Column {
+                id: dlgCol
+                width: dlg.width
+
+                // title bar (glossy chrome)
+                Item {
+                    width: parent.width
+                    height: 44
+                    Rectangle {
+                        anchors.fill: parent
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: Theme.chromeHi }
+                            GradientStop { position: 1.0; color: Theme.chromeLo }
+                        }
+                    }
+                    Text {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: qsTr("Delete download")
+                        font.pixelSize: 15
+                        font.bold: true
+                        color: Theme.text
+                    }
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        height: 1
+                        color: "#000000"
+                    }
+                }
+
+                // message
+                Item {
+                    width: parent.width
+                    height: msgText.height + 32
+                    Text {
+                        id: msgText
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: qsTr("Remove the downloaded audio from this device? You can download it again anytime.")
+                        font.pixelSize: 13
+                        color: Theme.textDim
+                        wrapMode: Text.WordWrap
+                    }
+                }
+
+                // actions: Cancel / Delete
+                Item {
+                    width: parent.width
+                    height: 62
+
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 16
+                        anchors.top: parent.top
+                        width: (parent.width - 42) / 2
+                        height: 46
+                        radius: 7
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: "#2c2c33" }
+                            GradientStop { position: 1.0; color: "#1a1a1f" }
+                        }
+                        border.width: 1
+                        border.color: Theme.hairlineStrong
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Cancel")
+                            font.pixelSize: 15
+                            font.weight: Font.DemiBold
+                            color: Theme.text
+                        }
+                        MouseArea { anchors.fill: parent; onClicked: page.confirmingDelete = false }
+                    }
+
+                    Rectangle {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 16
+                        anchors.top: parent.top
+                        width: (parent.width - 42) / 2
+                        height: 46
+                        radius: 7
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: "#e0564f" }
+                            GradientStop { position: 1.0; color: "#b8362f" }
+                        }
+                        border.width: 1
+                        border.color: "#7c1f1a"
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 7
+                            Image {
+                                source: "gfx/icon-trash-white.svg"
+                                width: 16
+                                height: 16
+                                smooth: true
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                text: qsTr("Delete")
+                                font.pixelSize: 15
+                                font.weight: Font.DemiBold
+                                color: "#ffffff"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                player.deleteDownload(page.eid);
+                                page.refreshDownloaded();
+                                page.confirmingDelete = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
