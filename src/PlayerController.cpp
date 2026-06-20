@@ -40,6 +40,7 @@ void PlayerController::playEpisode(const QUrl &url, const QString &eid, const QS
 
     m_downloader.cancel();
     m_waitingToPlay = false;
+    m_downloadOnly = false;             // this is the play path, not a bare download
     // reset() (not prepareForNewSource) so it also clears the engine's cached source
     // URL -- otherwise replaying the same eid is a no-op (setSource ignores an
     // unchanged URL) and the deferred play never re-fires.
@@ -116,6 +117,7 @@ void PlayerController::stop()
 {
     m_downloader.cancel();
     m_waitingToPlay = false;
+    m_downloadOnly = false;
     if (m_audio)
         m_audio->stop();
     setDownloadProgress(0.0);
