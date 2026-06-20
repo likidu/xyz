@@ -65,6 +65,7 @@ Page {
     function refreshDownloaded() {
         page.downloaded = (page.eid !== "" && player.isDownloaded(page.eid));
         page.downloadedSize = page.downloaded ? player.downloadedSizeText(page.eid) : "";
+        page.mode = page.ctaMode();
     }
 
     function ctaMode() {
@@ -256,15 +257,18 @@ Page {
                         text: Math.round(player.downloadProgress * 100) + "%"
                         font.pixelSize: 13; color: Theme.accentBright
                     }
-                    Image {
+                    Item {
                         id: dlCancel
-                        source: "gfx/icon-x.svg"; width: 14; height: 14; smooth: true
-                        anchors.right: parent.right; anchors.rightMargin: 14
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: { player.cancelDownload(); page.refreshDownloaded(); }
+                        width: 48; height: parent.height
+                        anchors.right: parent.right; anchors.top: parent.top
+                        Image {
+                            source: "gfx/icon-x.svg"; width: 14; height: 14; smooth: true
+                            anchors.centerIn: parent
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: { player.cancelDownload(); page.refreshDownloaded(); }
+                        }
                     }
                 }
 
@@ -324,7 +328,7 @@ Page {
                                 anchors.bottom: parent.bottom
                                 height: 5
                                 SequentialAnimation on height {
-                                    running: playingBtn.visible
+                                    running: page.mode === "playing"
                                     loops: Animation.Infinite
                                     NumberAnimation { to: 14; duration: 320 + index * 70; easing.type: Easing.InOutSine }
                                     NumberAnimation { to: 5;  duration: 320 + index * 70; easing.type: Easing.InOutSine }
