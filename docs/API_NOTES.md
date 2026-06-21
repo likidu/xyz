@@ -1,8 +1,10 @@
 # 小宇宙 (Xiaoyuzhou FM) Official API Notes
 
-Learned from the ultrazg/xyz Go proxy source (github.com/ultrazg/xyz, v1.10.0; its docs run
-at localhost:23020). We call the **official endpoints directly** — the proxy's request/response
-shapes mirror them, so its docs double as a reference.
+Learned from the ultrazg/xyz Go proxy source (github.com/ultrazg/xyz, v1.10.0), **cloned
+locally at `C:\Users\liya\Repos\xyz-go`** (its docs also run at localhost:23020 when the proxy
+is up). We call the **official endpoints directly** — the proxy's request/response shapes mirror
+them, so its source doubles as a reference. **For any Xiaoyuzhou FM API question, read that clone
+first** (see the Endpoint catalog below for the file map).
 
 Two distinct official hosts:
 
@@ -109,10 +111,18 @@ Content endpoints additionally want (per Go source; add when implementing them):
 
 ## Endpoint catalog
 
-Full endpoint list (subscriptions, episodes, comments, discovery, playback progress...) is in
-the proxy docs sidebar at localhost:23020/docs — fetch `http://localhost:23020/docs/<name>.md`
-for each. Proxy endpoint names map ~1:1 onto official paths; check the Go handlers for the
-exact official path before implementing a new one.
+Full endpoint list (subscriptions, episodes, comments, discovery, playback progress...) lives in
+the locally-cloned reference repo at `C:\Users\liya\Repos\xyz-go`:
+- **`doc/docs/*.md`** — per-endpoint docs (e.g. `episodeDetail.md`, `commentPrimary.md`);
+  `doc/docs/_sidebar.md` lists them all. Same content the proxy serves at localhost:23020/docs,
+  but no server needed.
+- **`handlers/*.go`** (per domain: `episode.go`, `comment.go`, `inbox.go`, `discovery.go`, …),
+  **`service/service.go`**, **`constant/url.go`** (`BaseUrl = https://api.xiaoyuzhoufm.com`) —
+  the real upstream path, request body, and response shape.
+
+Proxy facing-route names map ~1:1 onto official paths, but the facing body can differ from the
+real upstream call (see the M3 traps above) — trust the handler/service code for the exact
+official path and body before implementing a new endpoint.
 
 ## Fallback
 

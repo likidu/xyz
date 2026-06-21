@@ -4,6 +4,11 @@
 - Qt 4.7 / QML 1.1 application for Symbian Belle (Nokia C7 class), self-signed SIS deployment.
 - Generated from the qt-symbian-belle-starter template.
 - See `docs/PLAN.md` for milestones, `docs/DEVICE_NOTES.md` for the device experiment log.
+- **Xiaoyuzhou FM API**: `docs/API_NOTES.md` is the working reference. Its source of truth is
+  the **ultrazg/xyz** Go proxy (v1.10.0), cloned locally at `C:\Users\liya\Repos\xyz-go` — read
+  `doc/docs/*.md` (per-endpoint docs) and `handlers/*.go` + `service/service.go` +
+  `constant/url.go` (real request/response shapes) directly. No need to run the localhost:23020
+  proxy to look something up.
 
 ## Architecture
 - C++ managers in `src/` are exposed to QML via `setContextProperty` in `main.cpp`:
