@@ -33,6 +33,10 @@
         <file>gfx/icon-download.svg</file>
         <file>gfx/icon-check.svg</file>
         <file>gfx/icon-trash-white.svg</file>
+        <file>gfx/icon-pause.svg</file>
+        <file>gfx/icon-pause-white.svg</file>
+        <file>gfx/icon-rewind.svg</file>
+        <file>gfx/icon-forward.svg</file>
         <file>sfx/test-tone.wav</file>
     </qresource>
 </RCC>
