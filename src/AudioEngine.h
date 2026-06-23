@@ -50,6 +50,7 @@ public:
 
     double volume() const;
     void setVolume(double vol);
+    Q_INVOKABLE void nudgeVolume(double delta);
 
     bool muted() const;
     void setMuted(bool m);

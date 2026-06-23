@@ -70,6 +70,11 @@ void AudioEngine::setVolume(double vol)
     emit volumeChanged();
 }
 
+void AudioEngine::nudgeVolume(double delta)
+{
+    setVolume(qBound(0.0, m_volume + delta, 1.0));
+}
+
 bool AudioEngine::muted() const
 {
     return m_muted;
