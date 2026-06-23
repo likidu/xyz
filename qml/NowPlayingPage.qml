@@ -23,18 +23,6 @@ Page {
         return m + ":" + (r < 10 ? "0" + r : r);
     }
 
-    function remaining() {
-        var d = player.duration;
-        if (d <= 0) return "-0:00";
-        return "-" + fmt(d - player.position);
-    }
-
-    function progressRatio() {
-        if (page.scrubbing) return page.scrubRatio;
-        if (player.duration <= 0) return 0.0;
-        return player.position / player.duration;
-    }
-
     function togglePlay() {
         if (player.state === player.playingState) player.pause();
         else player.resume();
@@ -156,7 +144,8 @@ Page {
 
                 Rectangle {
                     anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom
-                    width: parent.width * page.progressRatio(); radius: 2
+                    width: page.scrubbing ? parent.width * page.scrubRatio : (player.duration > 0 ? parent.width * (player.position / player.duration) : 0)
+                    radius: 2
                     gradient: Gradient {
                         GradientStop { position: 0.0; color: Theme.accentDeep }
                         GradientStop { position: 1.0; color: Theme.accentBright }
@@ -165,7 +154,7 @@ Page {
                 Rectangle {
                     width: 13; height: 13; radius: 6.5; color: "#ffffff"
                     anchors.verticalCenter: parent.verticalCenter
-                    x: (parent.width * page.progressRatio()) - 6.5
+                    x: (page.scrubbing ? parent.width * page.scrubRatio : (player.duration > 0 ? parent.width * (player.position / player.duration) : 0)) - 6.5
                 }
             }
             MouseArea {
@@ -190,7 +179,7 @@ Page {
             }
             Text {
                 anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-                text: player.duration > 0 ? page.remaining() : "--:--"
+                text: player.duration > 0 ? ("-" + page.fmt(player.duration - player.position)) : "--:--"
                 font.pixelSize: 12; color: Theme.textDim
             }
         }
