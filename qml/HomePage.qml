@@ -17,6 +17,7 @@ Page {
     signal signedOut
     signal selfTestRequested
     signal tabSelected(int index)
+    signal openPlayerRequested
 
     function reload() {
         nickname = storage.value("auth.nickname", "");
@@ -147,6 +148,14 @@ Page {
                 onClicked: page.selfTestRequested()
             }
         }
+    }
+
+    MiniPlayer {
+        id: miniPlayer
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: tabBar.top
+        onExpandRequested: page.openPlayerRequested()
     }
 
     BelleTabBar {

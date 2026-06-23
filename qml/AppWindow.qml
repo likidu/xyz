@@ -108,6 +108,7 @@ XyzPageStackWindow {
         }
         onSelfTestRequested: pageStack.push(selfTestPage)
         onTabSelected: window.handleTab(index)
+        onOpenPlayerRequested: window.openNowPlaying()
     }
 
     UpdatesPage {
@@ -124,10 +125,12 @@ XyzPageStackWindow {
     SubscriptionsPage {
         id: subscriptionsPage
         onTabSelected: window.handleTab(index)
+        onOpenPlayerRequested: window.openNowPlaying()
     }
 
     EpisodePage {
         id: episodePage
+        onOpenPlayerRequested: window.openNowPlaying()
     }
 
     NowPlayingPage {
