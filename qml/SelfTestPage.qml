@@ -196,7 +196,7 @@ Page {
                 Button {
                     text: qsTr("Download & play")
                     enabled: page.testEpisodeUrl.length > 0
-                    onClicked: player.playEpisode(page.testEpisodeUrl, "selftest", "Test Episode")
+                    onClicked: player.playEpisode(page.testEpisodeUrl, "selftest", "Test Episode", "", "")
                 }
                 Button { text: qsTr("Stop"); onClicked: player.stop() }
             }

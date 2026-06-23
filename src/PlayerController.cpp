@@ -32,7 +32,8 @@ PlayerController::PlayerController(AudioEngine *audio, QObject *parent)
 int PlayerController::position() const { return m_audio ? m_audio->position() : 0; }
 int PlayerController::duration() const { return m_audio ? m_audio->duration() : 0; }
 
-void PlayerController::playEpisode(const QUrl &url, const QString &eid, const QString &title)
+void PlayerController::playEpisode(const QUrl &url, const QString &eid, const QString &title,
+                                   const QString &coverUrl, const QString &show)
 {
     if (!m_audio) {
         setErrorString(QLatin1String("Audio unavailable."));
@@ -42,14 +43,13 @@ void PlayerController::playEpisode(const QUrl &url, const QString &eid, const QS
 
     m_downloader.cancel();
     m_waitingToPlay = false;
-    m_downloadOnly = false;             // this is the play path, not a bare download
-    // reset() (not prepareForNewSource) so it also clears the engine's cached source
-    // URL -- otherwise replaying the same eid is a no-op (setSource ignores an
-    // unchanged URL) and the deferred play never re-fires.
-    m_audio->reset();                   // stop + clear media + clear source/state
+    m_downloadOnly = false;
+    m_audio->reset();
 
     if (m_currentEid != eid) { m_currentEid = eid; emit currentEidChanged(); }
     if (m_currentTitle != title) { m_currentTitle = title; emit currentTitleChanged(); }
+    if (m_currentCoverUrl != coverUrl) { m_currentCoverUrl = coverUrl; emit currentCoverUrlChanged(); }
+    if (m_currentShow != show) { m_currentShow = show; emit currentShowChanged(); }
     setErrorString(QString());
     setDownloadProgress(0.0);
     setState(Downloading);

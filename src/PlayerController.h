@@ -25,6 +25,8 @@ class PlayerController : public QObject
     Q_PROPERTY(QString errorString READ errorString NOTIFY errorStringChanged)
     Q_PROPERTY(QString currentEid READ currentEid NOTIFY currentEidChanged)
     Q_PROPERTY(QString currentTitle READ currentTitle NOTIFY currentTitleChanged)
+    Q_PROPERTY(QString currentCoverUrl READ currentCoverUrl NOTIFY currentCoverUrlChanged)
+    Q_PROPERTY(QString currentShow READ currentShow NOTIFY currentShowChanged)
     // Local file handed to the player (diagnostic: confirms a PUBLIC, MMF-readable path).
     Q_PROPERTY(QString currentSourcePath READ currentSourcePath NOTIFY currentSourcePathChanged)
 
@@ -46,6 +48,8 @@ public:
     QString errorString() const { return m_errorString; }
     QString currentEid() const { return m_currentEid; }
     QString currentTitle() const { return m_currentTitle; }
+    QString currentCoverUrl() const { return m_currentCoverUrl; }
+    QString currentShow() const { return m_currentShow; }
     QString currentSourcePath() const { return m_currentSourcePath; }
 
     int idleState() const { return Idle; }
@@ -57,7 +61,8 @@ public:
 
     // Fetch `url` to disk, then play it. `eid` keys the on-disk cache; `title` is
     // surfaced via currentTitle for any now-playing UI.
-    Q_INVOKABLE void playEpisode(const QUrl &url, const QString &eid, const QString &title);
+    Q_INVOKABLE void playEpisode(const QUrl &url, const QString &eid, const QString &title,
+                                 const QString &coverUrl, const QString &show);
     Q_INVOKABLE void pause();
     Q_INVOKABLE void resume();
     Q_INVOKABLE void stop();
@@ -78,6 +83,8 @@ signals:
     void errorStringChanged();
     void currentEidChanged();
     void currentTitleChanged();
+    void currentCoverUrlChanged();
+    void currentShowChanged();
     void currentSourcePathChanged();
     void downloadDeleted();        // emitted when a (possibly deferred) delete completes
 
@@ -110,6 +117,8 @@ private:
     QString m_errorString;
     QString m_currentEid;
     QString m_currentTitle;
+    QString m_currentCoverUrl;
+    QString m_currentShow;
     QString m_currentSourcePath;
     QString m_pendingDeleteEid;  // file still being deleted (waiting for MMF to release it)
     int m_deleteRetries;

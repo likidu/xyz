@@ -303,7 +303,7 @@ Page {
                         anchors.fill: parent
                         onClicked: {
                             if (page.mode === "paused") player.resume();
-                            else if (page.mode === "ready") player.playEpisode(page.audioUrl, page.eid, page.epTitle);
+                            else if (page.mode === "ready") player.playEpisode(page.audioUrl, page.eid, page.epTitle, page.coverUrl, page.showTitle);
                         }
                     }
                 }
