@@ -3,6 +3,35 @@ Symbian Belle Device Notes
 
 Hardware: Nokia C7 (Belle FP2)
 
+## 2026-06-23 — Downloads page storage meter via native RFs::Volume (simulator-verified)
+
+Result: the new Downloads Manager page shows a real phone-memory meter. **Simulator-verified
+only — NOT yet device-checked** (pending an on-device run). The `DownloadRegistry`
+(`downloads`) sums on-device episode sizes itself; the disk total/free comes from a native
+query.
+
+**Disk space (no QStorageInfo in Qt 4.7).** `MemoryMonitor` covers **RAM** (HAL
+`EMemoryRAM`/`EMemoryRAMFree`), not disk, so the meter needs its own query:
+`RFs::Connect()` → derive the drive from the download dir's leading letter via
+`RFs::CharToDrive()` → `RFs::Volume(vol, drive)` and read `vol.iSize` / `vol.iFree`. Guarded
+`#ifdef Q_OS_SYMBIAN` like the HAL block; links `-lefsrv` under `symbian {}`. On device the
+download dir resolves to `C:/Data/Xyz/audio` (public, per the 2026-06-14 data-cage note), so
+the meter reports the **C: phone-memory** volume — matching the "Phone memory" label.
+
+**Off-device fallback:** a `#elif defined(Q_OS_WIN)` branch uses `GetDiskFreeSpaceExW` so the
+meter shows real numbers in the Simulator (verified: 353.92 / 926.14 GB on the dev box).
+`#else` returns 0/0 and the QML meter degrades (hides the GB readout, keeps the downloads
+figure). Sizes/list are real: seeded two cached files (34/55 MB) → Account subtitle showed
+"2 episodes · 89.0 MB", rows showed per-file sizes.
+
+**Screenshotting the Simulator (tooling note).** A directly-launched Simulator-Qt `Xyz.exe`
+creates **no top-level window of its own** — its UI renders inside the host **"Qt Simulator"**
+window (separate process). So capture *that* window, not the app PID's window (the app PID
+has `MainWindowHandle=0`). `PrintWindow(hwnd, hdc, PW_RENDERFULLCONTENT=2)` into a `Bitmap`
+DC works; `Graphics.CopyFromScreen` throws "handle is invalid" in this non-interactive
+session (no screen DC). Run the capture under **Windows PowerShell 5.1 (`powershell.exe`)**,
+not pwsh 7 — `System.Drawing.Bitmap` is forwarded to a missing assembly in .NET Core.
+
 ## 2026-06-22 — Side volume keys control playback via RemCon (Nokia X7-00)
 
 Result: the phone's **side volume up/down keys now control podcast playback volume** on

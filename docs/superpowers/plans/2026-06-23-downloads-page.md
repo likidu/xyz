@@ -260,3 +260,29 @@ private:
 - Type consistency: `downloadedSizeBytes`/`downloadStorageDir`/`storageDir` used identically
   in T1↔T2; `note/remove/clearAll/refresh` + `items/count/downloadsText/disk*Bytes` consistent
   T2↔T5↔T6. ✓
+
+## Results (2026-06-23)
+
+**Done and simulator-verified.** Built clean for the simulator (Debug). Ran `Xyz.exe`,
+screenshotted both screens (seeded with two cached files + one in-flight entry):
+
+- **Account page** — Downloads nav row renders with the icon tile, "Downloads", live
+  subtitle "**2 episodes · 89.0 MB on device**" (registry summed the real 34 + 55 MB files),
+  and the right chevron, sitting above Sign out / Self-test.
+- **Downloads page** — "Phone memory **353.92 / 926.14 GB**" + segmented bar + legend
+  ("Downloads 89.0 MB · Other · Free 572.21 GB"); a "Downloading" section with the active row
+  (live `player.downloadProgress`) + cancel ✕; an "On device (2)" list with per-file sizes,
+  show·duration, check + dots. Tapping a row opens its EpisodePage; header trash → confirm →
+  clearAll.
+
+**Bug found + fixed during verification:** QML `font.pixelSize` is an **int** — the design's
+fractional sizes (11.5 / 12.5) threw "Invalid property assignment: int expected" and made the
+whole page (and window) fail to load. Rounded to 12 / 13.
+
+**Commits:** spec+plan → backend (`DownloadRegistry` + accessors) → QML (Account row +
+Downloads page) → docs.
+
+**Not yet on device:** the native `RFs::Volume` disk query is simulator-verified via the
+`GetDiskFreeSpaceEx` fallback; the Symbian path runs only on the C7 — to be confirmed on the
+next device run (see `docs/DEVICE_NOTES.md` 2026-06-23). Covers are blank in the seeded shots
+only because the seed used empty `coverUrl`; real episodes carry cover art.
