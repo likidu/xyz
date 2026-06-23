@@ -101,7 +101,17 @@ XyzPageStackWindow {
             pageStack.push(loginPage);
         }
         onSelfTestRequested: pageStack.push(selfTestPage)
+        onDownloadsRequested: pageStack.push(downloadsPage)
         onTabSelected: window.handleTab(index)
+    }
+
+    DownloadsPage {
+        id: downloadsPage
+        onTabSelected: window.handleTab(index)
+        onEpisodeRequested: {
+            episodePage.openWith(item);
+            pageStack.push(episodePage);
+        }
     }
 
     UpdatesPage {

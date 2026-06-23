@@ -16,7 +16,22 @@ Page {
 
     signal signedOut
     signal selfTestRequested
+    signal downloadsRequested
     signal tabSelected(int index)
+
+    // Subtitle for the Downloads nav row; reads downloads.count/downloadsText so it
+    // re-evaluates whenever the registry changes.
+    function downloadsSubtitle() {
+        if (downloads.count === 0) {
+            return qsTr("No downloads yet");
+        }
+        var ep = (downloads.count === 1) ? qsTr("1 episode")
+                                         : qsTr("%1 episodes").arg(downloads.count);
+        if (downloads.downloadsText !== "") {
+            return qsTr("%1 · %2 on device").arg(ep).arg(downloads.downloadsText);
+        }
+        return qsTr("%1 on device").arg(ep);
+    }
 
     function reload() {
         nickname = storage.value("auth.nickname", "");
@@ -93,7 +108,79 @@ Page {
             color: page.hasToken ? Theme.accentBright : Theme.errorColor
             anchors.horizontalCenter: parent.horizontalCenter
         }
-        Item { width: 1; height: 18 }
+
+        Item { width: 1; height: 14 }
+        // Downloads entry (design: .acct-nav / .nav-row)
+        Rectangle {
+            width: parent.width
+            height: 64
+            radius: 9
+            border.width: 1
+            border.color: Theme.hairline
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Theme.panel2 }
+                GradientStop { position: 1.0; color: Theme.panel }
+            }
+            opacity: downloadsMouse.pressed ? 0.85 : 1.0
+
+            Row {
+                anchors.fill: parent
+                anchors.leftMargin: 14
+                anchors.rightMargin: 14
+                spacing: 13
+
+                Rectangle {
+                    width: 40
+                    height: 40
+                    radius: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: "#248b6dff"
+                    border.width: 1
+                    border.color: Theme.accent
+                    Image {
+                        source: "gfx/icon-download.svg"
+                        width: 22
+                        height: 22
+                        smooth: true
+                        anchors.centerIn: parent
+                    }
+                }
+
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - 40 - 13 - 20 - 13
+                    spacing: 3
+                    Text {
+                        text: qsTr("Downloads")
+                        font.pixelSize: 16
+                        font.weight: Font.DemiBold
+                        color: Theme.text
+                    }
+                    Text {
+                        width: parent.width
+                        text: page.downloadsSubtitle()
+                        font.pixelSize: 13
+                        color: Theme.textDim
+                        elide: Text.ElideRight
+                    }
+                }
+
+                Image {
+                    source: "gfx/icon-chevron.svg"
+                    width: 20
+                    height: 20
+                    smooth: true
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+            MouseArea {
+                id: downloadsMouse
+                anchors.fill: parent
+                onClicked: page.downloadsRequested()
+            }
+        }
+
+        Item { width: 1; height: 14 }
         Rectangle {
             width: parent.width
             height: Theme.buttonHeight

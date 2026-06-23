@@ -235,7 +235,20 @@ Page {
                     MouseArea {
                         anchors.fill: parent
                         enabled: page.audioUrl !== ""
-                        onClicked: player.download(page.audioUrl, page.eid)
+                        onClicked: {
+                            // Record metadata in the registry before kicking off the fetch,
+                            // so the Downloads page can show this episode with its title/show.
+                            downloads.note({
+                                "eid": page.eid,
+                                "title": page.epTitle,
+                                "show": page.showTitle,
+                                "durationText": page.durationText,
+                                "coverUrl": page.coverUrl,
+                                "sizeText": page.audioSizeText,
+                                "audioUrl": page.audioUrl
+                            });
+                            player.download(page.audioUrl, page.eid);
+                        }
                     }
                 }
 
