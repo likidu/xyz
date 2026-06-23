@@ -31,6 +31,7 @@
 #include "AuthClient.h"
 #include "XyzApiClient.h"
 #include "PlayerController.h"
+#include "DownloadRegistry.h"
 #ifdef Q_OS_SYMBIAN
 #include "VolumeKeyCapturer.h"
 #endif
@@ -423,6 +424,7 @@ int main(int argc, char *argv[])
     PlayerController player(&audioEngine);
     AuthClient authClient(&storage);
     XyzApiClient xyzApiClient(&storage);
+    DownloadRegistry downloads(&storage, &player);
 
     QDeclarativeView view;
     view.rootContext()->setContextProperty("storage", &storage);
@@ -438,6 +440,7 @@ int main(int argc, char *argv[])
     view.rootContext()->setContextProperty("player", &player);
     view.rootContext()->setContextProperty("auth", &authClient);
     view.rootContext()->setContextProperty("xyzApi", &xyzApiClient);
+    view.rootContext()->setContextProperty("downloads", &downloads);
     static SslIgnoringNamFactory namFactory;
     view.engine()->setNetworkAccessManagerFactory(&namFactory);
     applyImportPaths(view.engine());

@@ -7,6 +7,7 @@ QT += core gui network declarative sql
 CONFIG += mobility
 MOBILITY += multimedia
 symbian:LIBS += -lhal
+symbian:LIBS += -lefsrv     # RFs::Volume for the downloads storage meter
 
 CONFIG -= debug_and_release
 CONFIG(debug, debug|release) {
@@ -62,7 +63,8 @@ SOURCES += \
     src/AuthClient.cpp \
     src/XyzApiClient.cpp \
     src/EpisodeDownloader.cpp \
-    src/PlayerController.cpp
+    src/PlayerController.cpp \
+    src/DownloadRegistry.cpp
 
 HEADERS += \
     src/MemoryMonitor.h \
@@ -73,7 +75,8 @@ HEADERS += \
     src/AuthClient.h \
     src/XyzApiClient.h \
     src/EpisodeDownloader.h \
-    src/PlayerController.h
+    src/PlayerController.h \
+    src/DownloadRegistry.h
 
 RESOURCES += \
     qml/qml.qrc

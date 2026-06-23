@@ -36,6 +36,9 @@ public:
     qint64 cachedSizeBytes(const QString &eid);
     bool removeCached(const QString &eid);
 
+    // The resolved writable download directory (drives the storage meter's volume query).
+    QString storageDir() { return audioDir(); }
+
 signals:
     void progress(qint64 received, qint64 total);
     void finished(const QString &localPath);

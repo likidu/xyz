@@ -70,6 +70,10 @@ public:
     Q_INVOKABLE QString downloadedSizeText(const QString &eid);
     Q_INVOKABLE void deleteDownload(const QString &eid);
 
+    // Read-only cache passthroughs for the downloads registry/storage meter.
+    Q_INVOKABLE qint64 downloadedSizeBytes(const QString &eid);
+    Q_INVOKABLE QString downloadStorageDir();
+
 signals:
     void stateChanged();
     void downloadProgressChanged();

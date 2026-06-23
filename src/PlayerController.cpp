@@ -90,6 +90,16 @@ QString PlayerController::downloadedSizeText(const QString &eid)
     return formatBytes(m_downloader.cachedSizeBytes(eid));
 }
 
+qint64 PlayerController::downloadedSizeBytes(const QString &eid)
+{
+    return m_downloader.cachedSizeBytes(eid);
+}
+
+QString PlayerController::downloadStorageDir()
+{
+    return m_downloader.storageDir();
+}
+
 void PlayerController::deleteDownload(const QString &eid)
 {
     if (eid == m_currentEid) {
