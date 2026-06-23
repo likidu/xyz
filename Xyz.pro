@@ -37,6 +37,11 @@ symbian {
     # Required capabilities for network streaming + local storage
     TARGET.CAPABILITY += NetworkServices ReadUserData WriteUserData UserEnvironment
 
+    # Hardware volume keys come through the RemCon framework, not key events.
+    LIBS += -lremconcoreapi -lremconinterfacebase
+    SOURCES += src/VolumeKeyCapturer.cpp
+    HEADERS += src/VolumeKeyCapturer.h
+
     # Note: SQLite driver is built into QtSql.dll on Symbian, no separate plugin deployment needed
 
     # Create the private data directory during installation so the app can write its database

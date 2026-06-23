@@ -31,6 +31,9 @@
 #include "AuthClient.h"
 #include "XyzApiClient.h"
 #include "PlayerController.h"
+#ifdef Q_OS_SYMBIAN
+#include "VolumeKeyCapturer.h"
+#endif
 
 namespace {
 QTextStream &infoStream()
@@ -411,6 +414,12 @@ int main(int argc, char *argv[])
     MemoryMonitor memoryMonitor;
     TlsChecker tlsChecker;
     AudioEngine audioEngine;
+#ifdef Q_OS_SYMBIAN
+    VolumeKeyCapturer *volumeKeys = 0;
+    TRAPD(vkErr, volumeKeys = VolumeKeyCapturer::NewL(&audioEngine));
+    if (vkErr != KErrNone)
+        qWarning("VolumeKeyCapturer init failed: %d (volume keys disabled)", vkErr);
+#endif
     PlayerController player(&audioEngine);
     AuthClient authClient(&storage);
     XyzApiClient xyzApiClient(&storage);
@@ -441,7 +450,11 @@ int main(int argc, char *argv[])
     view.resize(360, 640);
 
     view.show();
-    return app.exec();
+    const int rc = app.exec();
+#ifdef Q_OS_SYMBIAN
+    delete volumeKeys;   // before audioEngine goes out of scope
+#endif
+    return rc;
 }
 
 #include "main.moc"
