@@ -91,5 +91,7 @@ OTHER_FILES += \
     qml/UpdatesPage.qml \
     qml/SubscriptionsPage.qml \
     qml/EpisodePage.qml \
+    qml/NowPlayingPage.qml \
+    qml/MiniPlayer.qml \
     qml/js/Theme.js
 

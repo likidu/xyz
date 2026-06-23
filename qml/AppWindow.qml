@@ -22,6 +22,12 @@ XyzPageStackWindow {
         return auth.isLoggedIn();
     }
 
+    function openNowPlaying() {
+        if (!pageStack.busy && pageStack.currentPage !== nowPlayingPage) {
+            pageStack.push(nowPlayingPage);
+        }
+    }
+
     function handleTab(index) {
         if (index === 2) {
             while (pageStack.currentPage !== updatesPage && pageStack.depth > 1) {
@@ -112,6 +118,7 @@ XyzPageStackWindow {
             episodePage.openWith(item);
             pageStack.push(episodePage);
         }
+        onOpenPlayerRequested: window.openNowPlaying()
     }
 
     SubscriptionsPage {
@@ -121,6 +128,10 @@ XyzPageStackWindow {
 
     EpisodePage {
         id: episodePage
+    }
+
+    NowPlayingPage {
+        id: nowPlayingPage
     }
 
     SelfTestPage {
