@@ -3,6 +3,35 @@ Symbian Belle Device Notes
 
 Hardware: Nokia C7 (Belle FP2)
 
+## 2026-06-22 — Side volume keys control playback via RemCon (Nokia X7-00)
+
+Result: the phone's **side volume up/down keys now control podcast playback volume** on
+device (Nokia X7-00) and work well — each press steps `AudioEngine` volume by ±10%.
+
+**Key lesson:** the dedicated side volume keys are **RemCon media keys, not window-server
+key events.** They are never delivered to the Qt app as `QKeyEvent`/`Qt::Key_VolumeUp`, so
+a QML `Keys` handler or a `QApplication` event filter sees **nothing** (that was the exact
+"pressing the keys does nothing" symptom). Approaches that DON'T work for the side rocker:
+a Qt event filter (keys never arrive) and `RWindowGroup::CaptureKey` on
+`EStdKeyIncVolume`/`DecVolume` (the X7-00 rocker doesn't emit those WS scan codes).
+
+What works: register a **`CRemConCoreApiTarget`** (`remconcoreapi.lib` +
+`remconinterfacebase.lib`) via `CRemConInterfaceSelector::OpenTargetL()`. Its
+`MrccatoCommand` observer receives `ERemConCoreApiVolumeUp`/`...VolumeDown`, routed to
+`AudioEngine::nudgeVolume(±0.1)`. Send the required ack with a local `TRequestStatus` +
+`User::WaitForRequest` — **no `CActive` needed**; no stray-signal / `E32USER-CBase` panic
+observed on device. Act on non-`ERemConCoreApiButtonRelease` actions so one tap = one step.
+
+**Capability:** works with the existing caps (`NetworkServices ReadUserData WriteUserData
+UserEnvironment`) — RemCon target registration needed **no** extra capability; no
+`KErrPermissionDenied` (-46), so `LocalServices` was not required. Self-signed SIS installs
+and runs fine.
+
+Build/wiring: native `src/VolumeKeyCapturer.{h,cpp}` is `#ifdef Q_OS_SYMBIAN`-guarded and
+added to `Xyz.pro` only under `symbian {}`, so the Simulator (mingw) build never compiles it
+and stays green. Constructed in `main.cpp` via `TRAPD` (a leave just logs + disables the
+keys — graceful degradation). See `docs/superpowers/specs/2026-06-20-volume-keys-design.md`.
+
 ## 2026-06-19 — Episode page two-step Download→Play works on device (+ a QDir::entryList glob trap)
 
 Result: the episode page's two-step **Download → Play** is **device-verified** — an
