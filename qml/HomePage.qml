@@ -13,6 +13,7 @@ Page {
     property string uid: ""
     property string phoneLabel: ""
     property bool hasToken: false
+    property string audioResetMsg: ""
 
     signal signedOut
     signal selfTestRequested
@@ -29,6 +30,15 @@ Page {
     function signOut() {
         auth.logout();
         signedOut();
+    }
+
+    // Soft "reset audio": recreate the QMediaPlayer to drop our DevSound session, to try
+    // to recover a wedged MMF output (the -14/KErrInUse) without a full phone reboot.
+    function resetAudio() {
+        player.stop();
+        audioEngine.releaseFile();
+        page.audioResetMsg = qsTr("Audio engine reset");
+        resetMsgTimer.restart();
     }
 
     onStatusChanged: {
@@ -148,6 +158,48 @@ Page {
                 onClicked: page.selfTestRequested()
             }
         }
+
+        Item { width: 1; height: 8 }
+        // Soft audio reset: recreate the media player to recover a wedged MMF output
+        // (-14/KErrInUse) without rebooting the phone.
+        Rectangle {
+            width: parent.width
+            height: Theme.buttonHeight
+            radius: Theme.cornerRadius
+            border.width: 1
+            border.color: Theme.hairlineStrong
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: "#2a2a30" }
+                GradientStop { position: 1.0; color: "#1d1d22" }
+            }
+            opacity: resetAudioMouse.pressed ? 0.8 : 1.0
+
+            Text {
+                anchors.centerIn: parent
+                text: qsTr("Reset audio")
+                font.pixelSize: 16
+                font.bold: true
+                color: Theme.textDim
+            }
+            MouseArea {
+                id: resetAudioMouse
+                anchors.fill: parent
+                onClicked: page.resetAudio()
+            }
+        }
+        Text {
+            text: page.audioResetMsg
+            visible: page.audioResetMsg.length > 0
+            font.pixelSize: 13
+            color: Theme.accentBright
+            anchors.horizontalCenter: parent.horizontalCenter
+        }
+    }
+
+    Timer {
+        id: resetMsgTimer
+        interval: 2500
+        onTriggered: page.audioResetMsg = ""
     }
 
     MiniPlayer {
