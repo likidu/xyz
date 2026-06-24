@@ -4,12 +4,16 @@ import "js/Theme.js" as Theme
 
 // Now Playing — full-screen player (design: belle.css .player / screens-player.jsx).
 // Pushed over the current page; reads everything from the `player` context object.
-// Down-chevron header pops back. Speed chip + bottom toolbar are static placeholders.
+// Down-chevron header pops back. Tapping the title opens the episode detail (notes
+// + comments). Speed chip is a static placeholder.
 Page {
     id: page
     objectName: "NowPlayingPage"
 
     property bool hidesToolBar: true
+
+    // Tapping the title routes to the current episode's detail page (handled in AppWindow).
+    signal openEpisodeRequested
 
     // scrubber drag state (don't let position updates fight the finger)
     property bool scrubbing: false
@@ -51,31 +55,6 @@ Page {
         anchors.left: parent.left
         anchors.right: parent.right
         onBackClicked: pageStack.pop()
-    }
-
-    // ---- bottom toolbar (static placeholders) ----
-    Rectangle {
-        id: toolbar
-        height: 56
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: "#2a2a30" }
-            GradientStop { position: 0.08; color: "#1d1d22" }
-            GradientStop { position: 1.0; color: "#141417" }
-        }
-        Rectangle {
-            anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
-            height: 1; color: "#000000"
-        }
-        Row {
-            anchors.centerIn: parent
-            spacing: 56
-            Image { source: "gfx/icon-list.svg"; width: 24; height: 24; smooth: true; opacity: 0.75 }
-            Image { source: "gfx/icon-comment.svg"; width: 24; height: 24; smooth: true; opacity: 0.75 }
-            Image { source: "gfx/tab-headphones.svg"; width: 24; height: 24; smooth: true; opacity: 0.75 }
-        }
     }
 
     // ---- player body ----
@@ -123,12 +102,29 @@ Page {
 
         Item { width: 1; height: 8 }
 
-        Text {
+        // Tappable title + chevron → opens the episode detail (design: .pl-title.tappable).
+        Item {
+            id: titleWrap
             width: parent.width
-            text: player.currentTitle
-            font.pixelSize: 19; font.bold: true; color: Theme.text
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight
+            height: titleRow.height
+            Row {
+                id: titleRow
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 6
+                Text {
+                    id: titleText
+                    width: Math.min(implicitWidth, titleWrap.width - 22)
+                    text: player.currentTitle
+                    font.pixelSize: 19; font.bold: true; color: Theme.text
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight
+                }
+                Image {
+                    source: "gfx/icon-chevron.svg"; width: 16; height: 16; smooth: true
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+            MouseArea { anchors.fill: parent; onClicked: page.openEpisodeRequested() }
         }
 
         Item { width: 1; height: 22 }

@@ -28,6 +28,29 @@ XyzPageStackWindow {
         }
     }
 
+    // Title tap in Now Playing → show the current episode's detail (notes + comments).
+    // If that episode's page is already in the stack, unwind back to it (so its loaded
+    // detail is reused and the player slides away); otherwise seed and push it.
+    function openEpisodeForCurrent() {
+        if (pageStack.busy || player.currentEid === "") return;
+        var inStack = pageStack.find(function(p) { return p === episodePage; });
+        if (inStack) {
+            if (episodePage.eid !== player.currentEid) {
+                episodePage.openWith({
+                    "eid": player.currentEid, "coverUrl": player.currentCoverUrl,
+                    "title": player.currentTitle, "durationText": "", "whenText": ""
+                });
+            }
+            pageStack.pop(episodePage);
+        } else {
+            episodePage.openWith({
+                "eid": player.currentEid, "coverUrl": player.currentCoverUrl,
+                "title": player.currentTitle, "durationText": "", "whenText": ""
+            });
+            pageStack.push(episodePage);
+        }
+    }
+
     function handleTab(index) {
         if (index === 2) {
             while (pageStack.currentPage !== updatesPage && pageStack.depth > 1) {
@@ -145,6 +168,7 @@ XyzPageStackWindow {
 
     NowPlayingPage {
         id: nowPlayingPage
+        onOpenEpisodeRequested: window.openEpisodeForCurrent()
     }
 
     SelfTestPage {

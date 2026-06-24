@@ -3,7 +3,7 @@ import "js/Theme.js" as Theme
 
 // Mini floating player docked above the bottom bar (design: belle.css .miniplayer).
 // Bound to the `player` context object. Visible whenever a track is loaded/playing.
-// Tapping the bar (anywhere but the play button) emits expandRequested.
+// Simplified to cover + title/time only; tapping the bar emits expandRequested.
 Rectangle {
     id: mini
 
@@ -34,7 +34,7 @@ Rectangle {
         height: 1; color: "#000000"
     }
 
-    // whole-bar tap target (declared first → sits beneath the play button) → expand
+    // whole-bar tap target → expand to Now Playing
     MouseArea { anchors.fill: parent; onClicked: mini.expandRequested() }
 
     Rectangle {
@@ -50,36 +50,9 @@ Rectangle {
         }
     }
 
-    Rectangle {
-        id: playBtn
-        width: 38; height: 38; radius: 19
-        anchors.right: parent.right; anchors.rightMargin: 12
-        anchors.verticalCenter: parent.verticalCenter
-        color: "#248b6dff"
-        border.width: 1; border.color: Theme.accent
-        Image {
-            anchors.centerIn: parent; width: 18; height: 18; smooth: true
-            source: player.state === player.playingState ? "gfx/icon-pause.svg" : "gfx/icon-play.svg"
-        }
-        MouseArea {
-            anchors.fill: parent
-            onClicked: {
-                if (player.state === player.playingState) player.pause();
-                else player.resume();
-            }
-        }
-    }
-
-    Image {
-        id: queueIco
-        source: "gfx/icon-queue.svg"; width: 24; height: 24; smooth: true; opacity: 0.85
-        anchors.right: playBtn.left; anchors.rightMargin: 14
-        anchors.verticalCenter: parent.verticalCenter
-    }
-
     Column {
         anchors.left: cover.right; anchors.leftMargin: 11
-        anchors.right: queueIco.left; anchors.rightMargin: 11
+        anchors.right: parent.right; anchors.rightMargin: 12
         anchors.verticalCenter: parent.verticalCenter
         spacing: 2
         Text {
