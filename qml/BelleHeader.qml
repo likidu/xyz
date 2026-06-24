@@ -9,6 +9,7 @@ Rectangle {
     property alias title: titleText.text
     property bool showBack: true
     property string actionIconSource: ""
+    property string leadIconSource: "gfx/icon-back.svg"
     property bool actionOn: false
     signal backClicked
     signal actionClicked
@@ -37,7 +38,7 @@ Rectangle {
             opacity: backMouse.pressed ? 0.4 : 0
         }
         Image {
-            source: "gfx/icon-back.svg"
+            source: header.leadIconSource
             width: 26
             height: 26
             anchors.centerIn: parent

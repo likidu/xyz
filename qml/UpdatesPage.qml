@@ -14,6 +14,7 @@ Page {
     signal mySubsRequested
     signal tabSelected(int index)
     signal episodeRequested(variant item)
+    signal openPlayerRequested
 
     function load() {
         if (page.loadedOnce) {
@@ -114,7 +115,7 @@ Page {
     ListView {
         id: list
         anchors.top: titleBar.bottom
-        anchors.bottom: tabBar.top
+        anchors.bottom: miniPlayer.visible ? miniPlayer.top : tabBar.top
         anchors.left: parent.left
         anchors.right: parent.right
         clip: true
@@ -294,6 +295,14 @@ Page {
         text: qsTr("No updates yet")
         color: Theme.textDim
         font.pixelSize: 14
+    }
+
+    MiniPlayer {
+        id: miniPlayer
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: tabBar.top
+        onExpandRequested: page.openPlayerRequested()
     }
 
     BelleTabBar {

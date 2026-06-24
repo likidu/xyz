@@ -12,6 +12,7 @@ Page {
     objectName: "EpisodePage"
 
     property bool hidesToolBar: true
+    signal openPlayerRequested
 
     // ---- seeded from the tapped card ----
     property string eid: ""
@@ -137,7 +138,7 @@ Page {
     Flickable {
         id: scroll
         anchors.top: header.bottom
-        anchors.bottom: parent.bottom
+        anchors.bottom: miniPlayer.visible ? miniPlayer.top : parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         clip: true
@@ -316,7 +317,7 @@ Page {
                         anchors.fill: parent
                         onClicked: {
                             if (page.mode === "paused") player.resume();
-                            else if (page.mode === "ready") player.playEpisode(page.audioUrl, page.eid, page.epTitle);
+                            else if (page.mode === "ready") player.playEpisode(page.audioUrl, page.eid, page.epTitle, page.coverUrl, page.showTitle);
                         }
                     }
                 }
@@ -697,5 +698,13 @@ Page {
                 }
             }
         }
+    }
+
+    MiniPlayer {
+        id: miniPlayer
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        onExpandRequested: page.openPlayerRequested()
     }
 }

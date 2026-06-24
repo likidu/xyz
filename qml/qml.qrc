@@ -13,6 +13,8 @@
         <file>SubscriptionsPage.qml</file>
         <file>EpisodePage.qml</file>
         <file>DownloadsPage.qml</file>
+        <file>NowPlayingPage.qml</file>
+        <file>MiniPlayer.qml</file>
         <file>js/Theme.js</file>
         <file>gfx/icon-link.svg</file>
         <file>gfx/icon-x.svg</file>
@@ -35,6 +37,10 @@
         <file>gfx/icon-chevron.svg</file>
         <file>gfx/icon-check.svg</file>
         <file>gfx/icon-trash-white.svg</file>
+        <file>gfx/icon-pause.svg</file>
+        <file>gfx/icon-pause-white.svg</file>
+        <file>gfx/icon-rewind.svg</file>
+        <file>gfx/icon-forward.svg</file>
         <file>sfx/test-tone.wav</file>
     </qresource>
 </RCC>

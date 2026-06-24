@@ -22,6 +22,12 @@ XyzPageStackWindow {
         return auth.isLoggedIn();
     }
 
+    function openNowPlaying() {
+        if (!pageStack.busy && pageStack.currentPage !== nowPlayingPage) {
+            pageStack.push(nowPlayingPage);
+        }
+    }
+
     function handleTab(index) {
         if (index === 2) {
             while (pageStack.currentPage !== updatesPage && pageStack.depth > 1) {
@@ -103,6 +109,7 @@ XyzPageStackWindow {
         onSelfTestRequested: pageStack.push(selfTestPage)
         onDownloadsRequested: pageStack.push(downloadsPage)
         onTabSelected: window.handleTab(index)
+        onOpenPlayerRequested: window.openNowPlaying()
     }
 
     DownloadsPage {
@@ -122,15 +129,22 @@ XyzPageStackWindow {
             episodePage.openWith(item);
             pageStack.push(episodePage);
         }
+        onOpenPlayerRequested: window.openNowPlaying()
     }
 
     SubscriptionsPage {
         id: subscriptionsPage
         onTabSelected: window.handleTab(index)
+        onOpenPlayerRequested: window.openNowPlaying()
     }
 
     EpisodePage {
         id: episodePage
+        onOpenPlayerRequested: window.openNowPlaying()
+    }
+
+    NowPlayingPage {
+        id: nowPlayingPage
     }
 
     SelfTestPage {

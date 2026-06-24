@@ -13,6 +13,7 @@ Page {
     property string viewMode: "grid"
 
     signal tabSelected(int index)
+    signal openPlayerRequested
 
     function load() {
         if (page.loadedOnce) {
@@ -54,7 +55,7 @@ Page {
     Item {
         id: content
         anchors.top: header.bottom
-        anchors.bottom: tabBar.top
+        anchors.bottom: miniPlayer.visible ? miniPlayer.top : tabBar.top
         anchors.left: parent.left
         anchors.right: parent.right
         clip: true
@@ -352,6 +353,14 @@ Page {
         text: qsTr("No subscriptions yet")
         color: Theme.textDim
         font.pixelSize: 14
+    }
+
+    MiniPlayer {
+        id: miniPlayer
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: tabBar.top
+        onExpandRequested: page.openPlayerRequested()
     }
 
     BelleTabBar {
