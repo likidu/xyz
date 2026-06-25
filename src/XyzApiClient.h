@@ -23,6 +23,8 @@ class XyzApiClient : public QObject
     Q_PROPERTY(QVariantList subscriptions READ subscriptions NOTIFY subscriptionsLoaded)
     Q_PROPERTY(QVariantMap episode READ episode NOTIFY episodeLoaded)
     Q_PROPERTY(QVariantList comments READ comments NOTIFY commentsLoaded)
+    Q_PROPERTY(int commentsTotal READ commentsTotal NOTIFY commentsLoaded)
+    Q_PROPERTY(bool hasMoreComments READ hasMoreComments NOTIFY commentsLoaded)
 
 public:
     explicit XyzApiClient(StorageManager *storage, QObject *parent = 0);
@@ -33,11 +35,15 @@ public:
     QVariantList subscriptions() const;
     QVariantMap episode() const;
     QVariantList comments() const;
+    int commentsTotal() const;
+    bool hasMoreComments() const;
 
     Q_INVOKABLE void fetchInbox();
     Q_INVOKABLE void fetchSubscriptions();
     Q_INVOKABLE void fetchEpisode(const QString &eid);
     Q_INVOKABLE void fetchComments(const QString &eid);
+    // Append the next page using the loadMoreKey returned by the last comments fetch.
+    Q_INVOKABLE void loadMoreComments();
 
 signals:
     void busyChanged();
@@ -55,7 +61,7 @@ private slots:
 
 private:
     enum RequestType { NoneRequest, InboxRequest, SubscriptionsRequest,
-                       EpisodeRequest, CommentsRequest };
+                       EpisodeRequest, CommentsRequest, MoreCommentsRequest };
 
     void startPost(RequestType type, const QString &path, const QVariantMap &body);
     void startGet(RequestType type, const QString &path);
@@ -82,6 +88,11 @@ private:
     QVariantList m_subscriptions;
     QVariantMap m_episode;
     QVariantList m_comments;
+    // Comment pagination: eid of the current thread, the opaque loadMoreKey to
+    // echo back for the next page (empty when there are no more), and the total.
+    QString m_commentsEid;
+    QVariantMap m_commentsLoadMoreKey;
+    int m_commentsTotal;
 };
 
 #endif // XYZAPICLIENT_H

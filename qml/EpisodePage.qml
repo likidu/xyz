@@ -37,6 +37,7 @@ Page {
     property string commentCountText: ""
     property variant commentModel: []
     property bool detailLoaded: false
+    property bool loadingMoreComments: false
 
     // Seed the hero from the tapped inbox item and fetch fresh detail on activation.
     function openWith(item) {
@@ -53,6 +54,7 @@ Page {
         page.commentCountText = "";
         page.commentModel = [];
         page.detailLoaded = false;
+        page.loadingMoreComments = false;
         page.downloaded = false;
         page.downloadedSize = "";
         page.confirmingDelete = false;
@@ -110,6 +112,11 @@ Page {
         }
         onCommentsLoaded: {
             page.commentModel = xyzApi.comments;
+        }
+        // Clear the "loading more" spinner on any request completion — success emits
+        // commentsLoaded, but an error/timeout only flips busy back to false.
+        onBusyChanged: {
+            if (!xyzApi.busy) page.loadingMoreComments = false;
         }
     }
 
@@ -265,6 +272,7 @@ Page {
                     Rectangle {
                         anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom
                         width: parent.width * player.downloadProgress
+                        radius: 6
                         color: Theme.accentDeep
                     }
                     Text {
@@ -519,6 +527,65 @@ Page {
                         height: 1
                         color: Theme.hairline
                     }
+                }
+            }
+
+            // ---- load-more comments (design: screens-comments.jsx load states) ----
+            Item {
+                id: loadMoreWrap
+                width: contentCol.width
+                visible: page.detailLoaded && page.commentModel.length > 0
+                height: visible ? 58 : 0
+
+                // (a) idle → "Load more" + showing-count
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 3
+                    visible: xyzApi.hasMoreComments && !page.loadingMoreComments
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: qsTr("Load more")
+                        font.pixelSize: 15; font.weight: Font.DemiBold; color: Theme.accentBright
+                    }
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: qsTr("Showing %1 of %2").arg(page.commentModel.length).arg(xyzApi.commentsTotal)
+                        font.pixelSize: 12; color: Theme.textDim
+                    }
+                }
+
+                // (b) loading next page → spinner + "Loading more…"
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 9
+                    visible: page.loadingMoreComments
+                    BusyIndicator {
+                        running: page.loadingMoreComments
+                        width: 20; height: 20
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Column {
+                        spacing: 3; anchors.verticalCenter: parent.verticalCenter
+                        Text { text: qsTr("Loading more…"); font.pixelSize: 15; color: Theme.text }
+                        Text {
+                            text: qsTr("Showing %1 of %2").arg(page.commentModel.length).arg(xyzApi.commentsTotal)
+                            font.pixelSize: 12; color: Theme.textDim
+                        }
+                    }
+                }
+
+                // (c) end → all loaded
+                Text {
+                    anchors.centerIn: parent
+                    visible: !xyzApi.hasMoreComments && !page.loadingMoreComments
+                    text: qsTr("All comments loaded")
+                    font.pixelSize: 13; color: Theme.textFaint
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: xyzApi.hasMoreComments && !page.loadingMoreComments && !xyzApi.busy
+                    onClicked: { page.loadingMoreComments = true; xyzApi.loadMoreComments(); }
                 }
             }
 

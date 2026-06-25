@@ -45,6 +45,7 @@ XyzApiClient::XyzApiClient(StorageManager *storage, QObject *parent)
     , m_reply(0)
     , m_busy(false)
     , m_requestType(NoneRequest)
+    , m_commentsTotal(0)
 {
     m_timeout.setSingleShot(true);
     connect(&m_timeout, SIGNAL(timeout()), this, SLOT(onTimeout()));
@@ -56,6 +57,8 @@ QVariantList XyzApiClient::inboxItems() const { return m_inboxItems; }
 QVariantList XyzApiClient::subscriptions() const { return m_subscriptions; }
 QVariantMap XyzApiClient::episode() const { return m_episode; }
 QVariantList XyzApiClient::comments() const { return m_comments; }
+int XyzApiClient::commentsTotal() const { return m_commentsTotal; }
+bool XyzApiClient::hasMoreComments() const { return !m_commentsLoadMoreKey.isEmpty(); }
 
 void XyzApiClient::fetchInbox()
 {
@@ -84,13 +87,18 @@ void XyzApiClient::fetchEpisode(const QString &eid)
              QString::fromLatin1("/v1/episode/get?eid=") + QString(QUrl::toPercentEncoding(eid)));
 }
 
-// Top comments. The official body wraps the eid in an owner object — a flat
-// {"id":...} is the proxy's facing shape, NOT what the real API expects.
+// Top comments (first page). The official body wraps the eid in an owner object —
+// a flat {"id":...} is the proxy's facing shape, NOT what the real API expects.
 void XyzApiClient::fetchComments(const QString &eid)
 {
     if (eid.isEmpty()) {
         return;
     }
+    // Reset pagination for the new thread so a previous episode's key can't leak.
+    m_commentsEid = eid;
+    m_commentsLoadMoreKey.clear();
+    m_commentsTotal = 0;
+
     QVariantMap owner;
     owner.insert(QString::fromLatin1("id"), eid);
     owner.insert(QString::fromLatin1("type"), QString::fromLatin1("EPISODE"));
@@ -98,6 +106,23 @@ void XyzApiClient::fetchComments(const QString &eid)
     body.insert(QString::fromLatin1("order"), QString::fromLatin1("HOT"));
     body.insert(QString::fromLatin1("owner"), owner);
     startPost(CommentsRequest, QString::fromLatin1("/v1/comment/list-primary"), body);
+}
+
+// Next page of the same thread. The API returns an opaque loadMoreKey object that
+// we echo back verbatim to fetch the following page; results are appended.
+void XyzApiClient::loadMoreComments()
+{
+    if (m_busy || m_commentsEid.isEmpty() || m_commentsLoadMoreKey.isEmpty()) {
+        return;
+    }
+    QVariantMap owner;
+    owner.insert(QString::fromLatin1("id"), m_commentsEid);
+    owner.insert(QString::fromLatin1("type"), QString::fromLatin1("EPISODE"));
+    QVariantMap body;
+    body.insert(QString::fromLatin1("order"), QString::fromLatin1("HOT"));
+    body.insert(QString::fromLatin1("owner"), owner);
+    body.insert(QString::fromLatin1("loadMoreKey"), m_commentsLoadMoreKey);
+    startPost(MoreCommentsRequest, QString::fromLatin1("/v1/comment/list-primary"), body);
 }
 
 void XyzApiClient::setBusy(bool busy)
@@ -312,12 +337,22 @@ void XyzApiClient::onReplyFinished()
         return;
     }
 
-    if (type == CommentsRequest) {
+    if (type == CommentsRequest || type == MoreCommentsRequest) {
         QVariantList shaped;
         for (int i = 0; i < rawItems.size(); ++i) {
             shaped.append(shapeComment(rawItems.at(i).toMap()));
         }
-        m_comments = shaped;
+        if (type == MoreCommentsRequest) {
+            m_comments += shaped;          // append the next page
+        } else {
+            m_comments = shaped;           // first page replaces
+        }
+        // totalCount is echoed on every page; loadMoreKey is absent on the last
+        // page, which leaves the map empty and flips hasMoreComments to false.
+        if (top.contains(QString::fromLatin1("totalCount"))) {
+            m_commentsTotal = top.value(QString::fromLatin1("totalCount")).toInt();
+        }
+        m_commentsLoadMoreKey = top.value(QString::fromLatin1("loadMoreKey")).toMap();
         setBusy(false);
         emit commentsLoaded();
         return;
