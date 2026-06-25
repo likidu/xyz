@@ -630,7 +630,7 @@ Page {
 
     BelleTabBar {
         id: tabBar
-        activeIndex: 3
+        activeIndex: 2
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom

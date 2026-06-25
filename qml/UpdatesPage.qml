@@ -148,29 +148,30 @@ Page {
                 anchors.right: parent.right
                 anchors.leftMargin: 14
                 anchors.rightMargin: 14
-                spacing: 11
+                spacing: 14
 
                 Row {
                     width: parent.width
                     spacing: 12
 
                     Rectangle {
-                        width: 64
-                        height: 64
+                        width: 70
+                        height: 70
+                        radius: 6
                         color: "#1a1a22"
                         clip: true
                         Image {
                             anchors.fill: parent
                             fillMode: Image.PreserveAspectCrop
                             smooth: true
-                            sourceSize.width: 64
-                            sourceSize.height: 64
+                            sourceSize.width: 70
+                            sourceSize.height: 70
                             source: modelData.coverUrl
                         }
                     }
 
                     Column {
-                        width: parent.width - 76
+                        width: parent.width - 82
                         spacing: 6
 
                         Text {
@@ -198,57 +199,24 @@ Page {
                 // meta row (dot separators avoid unicode tofu on Symbian)
                 Row {
                     width: parent.width
-                    spacing: 9
+                    spacing: 10
 
-                    Text { text: modelData.durationText; font.pixelSize: 13; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: modelData.durationText; font.pixelSize: 14; color: Theme.textDim; anchors.verticalCenter: parent.verticalCenter }
                     Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: modelData.whenText; font.pixelSize: 13; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
-                    Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
-                    Row {
-                        spacing: 4
-                        anchors.verticalCenter: parent.verticalCenter
-                        Image { source: "gfx/tab-headphones.svg"; width: 13; height: 13; smooth: true; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: modelData.playCount; font.pixelSize: 13; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
-                    }
+                    Text { text: modelData.whenText; font.pixelSize: 14; color: Theme.textDim; anchors.verticalCenter: parent.verticalCenter }
                     Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
                     Row {
                         spacing: 4
                         anchors.verticalCenter: parent.verticalCenter
-                        Image { source: "gfx/icon-comment.svg"; width: 13; height: 13; smooth: true; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: modelData.commentCount; font.pixelSize: 13; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
+                        Image { source: "gfx/tab-headphones.svg"; width: 14; height: 14; smooth: true; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: modelData.playCount; font.pixelSize: 14; color: Theme.textDim; anchors.verticalCenter: parent.verticalCenter }
                     }
-                }
-
-                // action row (placeholders — player deferred; controls inert)
-                Item {
-                    width: parent.width
-                    height: 48
-
+                    Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.textFaint; anchors.verticalCenter: parent.verticalCenter }
                     Row {
-                        anchors.left: parent.left
+                        spacing: 4
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: 18
-
-                        Image { source: "gfx/icon-queue.svg"; width: 26; height: 26; smooth: true; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
-                        Row {
-                            spacing: 6
-                            anchors.verticalCenter: parent.verticalCenter
-                            Image { source: "gfx/icon-comment.svg"; width: 26; height: 26; smooth: true; anchors.verticalCenter: parent.verticalCenter }
-                            Text { text: modelData.commentCount; font.pixelSize: 14; font.weight: Font.DemiBold; color: Theme.accentBright; anchors.verticalCenter: parent.verticalCenter }
-                        }
-                        Image { source: "gfx/icon-dots.svg"; width: 26; height: 26; smooth: true; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
-                    }
-
-                    Rectangle {
-                        width: 48
-                        height: 48
-                        radius: 24
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: "#248b6dff"
-                        border.width: 1
-                        border.color: Theme.accent
-                        Image { source: "gfx/icon-play.svg"; width: 24; height: 24; smooth: true; anchors.centerIn: parent }
+                        Image { source: "gfx/icon-comment.svg"; width: 14; height: 14; smooth: true; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: modelData.commentCount; font.pixelSize: 14; color: Theme.textDim; anchors.verticalCenter: parent.verticalCenter }
                     }
                 }
             }
@@ -307,7 +275,7 @@ Page {
 
     BelleTabBar {
         id: tabBar
-        activeIndex: 2
+        activeIndex: 1
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom

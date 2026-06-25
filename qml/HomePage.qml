@@ -76,8 +76,22 @@ Page {
         anchors.right: parent.right
     }
 
-    Column {
+    // Account content scrolls — on the small nHD screen the profile + Downloads
+    // entry + action buttons overflow under the tab bar (design: .content > .scroll).
+    Flickable {
+        id: accountScroll
         anchors.top: header.bottom
+        anchors.bottom: miniPlayer.visible ? miniPlayer.top : tabBar.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        clip: true
+        contentWidth: width
+        contentHeight: acctCol.height + 70
+        flickableDirection: Flickable.VerticalFlick
+
+        Column {
+        id: acctCol
+        anchors.top: parent.top
         anchors.topMargin: 46
         anchors.left: parent.left
         anchors.right: parent.right
@@ -281,6 +295,7 @@ Page {
             color: Theme.accentBright
             anchors.horizontalCenter: parent.horizontalCenter
         }
+        }
     }
 
     Timer {
@@ -299,7 +314,7 @@ Page {
 
     BelleTabBar {
         id: tabBar
-        activeIndex: 3
+        activeIndex: 2
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom

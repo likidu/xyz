@@ -6,7 +6,7 @@ import "js/Theme.js" as Theme
 Rectangle {
     id: tabBar
 
-    property int activeIndex: 2
+    property int activeIndex: 1
     signal tabSelected(int index)
 
     height: Theme.tabBarHeight
@@ -40,11 +40,11 @@ Rectangle {
         anchors.fill: parent
 
         Repeater {
-            model: ["gfx/tab-compass.svg", "gfx/tab-search.svg",
+            model: ["gfx/tab-compass.svg",
                     "gfx/tab-headphones.svg", "gfx/tab-person.svg"]
 
             Item {
-                width: tabBar.width / 4
+                width: tabBar.width / 3
                 height: tabBar.height
 
                 Rectangle {

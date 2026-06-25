@@ -52,16 +52,16 @@ XyzPageStackWindow {
     }
 
     function handleTab(index) {
-        if (index === 2) {
+        if (index === 1) {
             while (pageStack.currentPage !== updatesPage && pageStack.depth > 1) {
                 pageStack.pop();
             }
-        } else if (index === 3) {
+        } else if (index === 2) {
             if (!pageStack.busy && pageStack.currentPage !== homePage) {
                 pageStack.push(homePage);
             }
         }
-        // index 0 (Discover) / 1 (Search) are inert placeholders for now.
+        // index 0 (Discover) is an inert placeholder for now.
     }
 
     ToolBarLayout {
