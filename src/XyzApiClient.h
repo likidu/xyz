@@ -66,10 +66,19 @@ private slots:
 private:
     enum RequestType { NoneRequest, InboxRequest, SubscriptionsRequest,
                        EpisodeRequest, CommentsRequest, MoreCommentsRequest,
-                       DiscoveryRequest };
+                       DiscoveryRequest, RefreshRequest };
 
     void startPost(RequestType type, const QString &path, const QVariantMap &body);
     void startGet(RequestType type, const QString &path);
+    // Shared issue-path for startPost/startGet/startRefresh/resendReplay.
+    void sendRequest(RequestType type, bool isPost, const QString &path,
+                     const QVariantMap &body, bool withRefreshHeader = false);
+    // One-shot token refresh on 401, then re-send the request that failed.
+    void startRefresh();
+    void resendReplay();
+    void parseRefreshTokens(const QByteArray &payload,
+                            const QByteArray &hdrAccess, const QByteArray &hdrRefresh,
+                            QString &outAccess, QString &outRefresh) const;
     void abortActiveRequest();
     void applyContentHeaders(QNetworkRequest &request);
     void setBusy(bool busy);
@@ -99,6 +108,13 @@ private:
     bool m_busy;
     QString m_errorMessage;
     RequestType m_requestType;
+    // Replay state: remember the in-flight request so it can be re-sent after a
+    // refresh; m_refreshAttempted caps the refresh to once per logical request.
+    RequestType m_replayType;
+    QString m_replayPath;
+    QVariantMap m_replayBody;
+    bool m_replayIsPost;
+    bool m_refreshAttempted;
     QVariantList m_inboxItems;
     QVariantList m_subscriptions;
     QVariantMap m_episode;
