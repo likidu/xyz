@@ -3,6 +3,44 @@ Symbian Belle Device Notes
 
 Hardware: Nokia C7 (Belle FP2)
 
+## 2026-06-25 — Discovery page (multi-section discovery-feed), simulator data-path verified
+
+Added the Discovery tab (compass / index 0, previously inert). `xyzApi.fetchDiscovery()`
+chains **3 sequential** `POST /v1/discovery-feed/list` calls — default, then
+`loadMoreKey:"discoveryTopic"`, then `loadMoreKey:"mediumDiscoveryPictorial"`. Sequential,
+not concurrent, because `XyzApiClient` is single-reply (`m_reply` + `abortActiveRequest()`
+cancels any in-flight call); a small phase counter (`finishDiscoveryPhase`) advances 0→1→2
+and emits `discoveryLoaded()` once at the end. **Episode-only:** only `targetType=="EPISODE"`
+modules become sections; PODCAST modules and `NEW_POWER`/etc. entries are skipped (there is
+no podcast detail page). The response is **double-nested** (`data.data[].data[].target[].episode`),
+unlike inbox's single `data[]`. Each episode is shaped to a superset of `EpisodePage.openWith`'s
+seed so cards tap straight through.
+
+**Verification (simulator, against `scripts/mock-content.ps1` with a body-aware discovery
+branch):**
+- Built the sim target clean; launched `Xyz.exe` via the generated `Xyz.run.ps1` with
+  `XYZ_API_BASE=http://localhost:8099` and a temporary `initialPage: discoveryPage` (reverted
+  after) to open straight onto Discovery.
+- App init log reached `[IMPORT PATHS]` with **no QML load error**, i.e. `DiscoveryPage.qml`
+  parsed and the page activated.
+- Instrumented the mock to log requests: the app fired **exactly the three discovery calls in
+  order** with the correct bodies — `{"returnAll":"false"}`, then
+  `{"loadMoreKey":"discoveryTopic","returnAll":"false"}`, then
+  `{"loadMoreKey":"mediumDiscoveryPictorial","returnAll":"false"}`. This confirms the whole
+  data path end-to-end: page activation → `load()` → `fetchDiscovery()` → the native 3-phase
+  chain firing and advancing through every phase (each returned 200).
+- `returnAll` goes on the wire as the JSON **string** `"false"` (matches the ultrazg/xyz Go
+  proxy, which sends a Go string). Flag only if the live API rejects it.
+
+**Could NOT capture pixels in this headless run.** The QML view is OpenGL-backed, so
+`PrintWindow` renders black, and the standalone app exits cleanly without the Qt Simulator
+harness in a non-interactive session. Card layout/bindings were instead confirmed by static
+QML-1.1 review. **A human visual pass (or a real-device run) is still pending** — open the app,
+tap the compass tab, and confirm the four sections (大家都在听 / 编辑精选 / 中年人运动全面指南
+with its subtitle / 最热榜) render with covers and that a card opens EpisodePage. Also still
+**unverified against the live API** — confirm the section titles + double-nesting on the real
+endpoint before trusting (the mock has diverged from real before).
+
 ## 2026-06-23 — Downloads page storage meter via native RFs::Volume (simulator-verified)
 
 Result: the new Downloads Manager page shows a real phone-memory meter. **Simulator-verified
