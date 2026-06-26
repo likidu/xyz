@@ -34,7 +34,12 @@ No retried inbox 200. The `m_refreshAttempted` guard prevented a loop, and
 **Pending:** Real-device confirmation of the refresh request shape — specifically that
 the live jike gateway accepts the empty body and the `x-jike-refresh-token` header on
 `POST /app_auth_tokens.refresh`. Simulator + mock is conclusive for the C++ control flow
-but cannot validate the actual HTTP negotiation with the real backend.
+but cannot validate the actual HTTP negotiation with the real backend. Watch one specific
+detail: the empty refresh POST still goes out with `Content-Type: application/json` (from
+`applyContentHeaders`), whereas the ultrazg/xyz Go proxy uses
+`application/x-www-form-urlencoded`. If the live gateway rejects the empty JSON-typed body
+(it returns `rpc_error`/HTTP 400 on shape it dislikes), every refresh would silently fail
+→ logout; in that case match the proxy's content-type for the refresh request.
 
 ## 2026-06-23 — Downloads page storage meter via native RFs::Volume (simulator-verified)
 
