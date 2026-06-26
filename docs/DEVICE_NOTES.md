@@ -32,6 +32,14 @@ branch):**
 - `returnAll` goes on the wire as the JSON **string** `"false"` (matches the ultrazg/xyz Go
   proxy, which sends a Go string). Flag only if the live API rejects it.
 
+**Post-review hardening (header + retry).** Final review caught that discovery requests need
+`abtest-info: {"old_user_discovery_feed":"enable"}` (the Go proxy sets it; the shared
+`applyContentHeaders` did not) — now sent **for discovery requests only**. The mock can't catch
+this, so it's a likely live "empty feed" cause if missing; still needs a real-token confirmation.
+Also: if **all three** feed calls fail at HTTP/parse level, the client no longer emits
+`discoveryLoaded`, so the page's `loadedOnce` stays false and a transient failure retries on the
+next tab visit (mirrors `fetchInbox`); a *successful* empty feed shows the normal empty state.
+
 **Could NOT capture pixels in this headless run.** The QML view is OpenGL-backed, so
 `PrintWindow` renders black, and the standalone app exits cleanly without the Qt Simulator
 harness in a non-interactive session. Card layout/bindings were instead confirmed by static
