@@ -3,6 +3,39 @@ Symbian Belle Device Notes
 
 Hardware: Nokia C7 (Belle FP2)
 
+## 2026-06-25 — Refresh-token 401 retry
+
+Simulator + PowerShell mock verification (`scripts/mock-content.ps1`, `localhost:8099`).
+
+**Happy path (expired access token, valid refresh token):** The mock gates all content
+endpoints with 401 until a refresh succeeds. Observed mock request sequence:
+
+```
+POST /v1/inbox/list -> 401 (gated)
+POST /app_auth_tokens.refresh -> 200 (refresh)
+POST /v1/inbox/list -> 200
+```
+
+The C++ `XyzApiClient` correctly intercepted the 401, fired a one-shot refresh (sending
+both tokens in headers, empty body), stored the new `x-jike-access-token` /
+`x-jike-refresh-token` returned in the body, and silently replayed the inbox request —
+no `sessionExpired` emitted, no logout.
+
+**Negative path (dead refresh token):** Mock's refresh handler returns 401. Observed:
+
+```
+POST /v1/inbox/list -> 401 (gated)
+POST /app_auth_tokens.refresh -> 401 (refresh denied)
+```
+
+No retried inbox 200. The `m_refreshAttempted` guard prevented a loop, and
+`sessionExpired` was emitted as expected (test page would show "SESSION EXPIRED").
+
+**Pending:** Real-device confirmation of the refresh request shape — specifically that
+the live jike gateway accepts the empty body and the `x-jike-refresh-token` header on
+`POST /app_auth_tokens.refresh`. Simulator + mock is conclusive for the C++ control flow
+but cannot validate the actual HTTP negotiation with the real backend.
+
 ## 2026-06-23 — Downloads page storage meter via native RFs::Volume (simulator-verified)
 
 Result: the new Downloads Manager page shows a real phone-memory meter. **Simulator-verified
