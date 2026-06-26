@@ -58,8 +58,8 @@ Rectangle {
 
                 Image {
                     source: modelData
-                    width: 24
-                    height: 24
+                    width: 30
+                    height: 30
                     smooth: true
                     anchors.centerIn: parent
                     opacity: index === tabBar.activeIndex ? 1.0 : 0.65
