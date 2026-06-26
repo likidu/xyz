@@ -53,6 +53,40 @@ $comments = @{ code=200; msg="OK"; totalCount=128; data=@(
      author=@{ nickname="Pico"; avatar=@{ picture=@{ thumbnailUrl=$img } } } }
 ) } | ConvertTo-Json -Depth 8
 
+# discovery-feed/list is double-nested (data.data[]) and selected by loadMoreKey.
+function New-DiscEpisode($eid, $title, $show, $dur, $when, $comments) {
+  @{ episode = @{ type="EPISODE"; eid=$eid; title=$title; duration=$dur;
+       pubDate=$when; commentCount=$comments;
+       image=@{ thumbnailUrl=$img; smallPicUrl=$img };
+       podcast=@{ title=$show; image=@{ smallPicUrl=$img; thumbnailUrl=$img } } };
+     recommendation="" }
+}
+function New-DiscModule($title, $desc, $items) {
+  @{ title=$title; moduleType="X"; targetType="EPISODE"; description=$desc; target=$items }
+}
+function New-DiscPayload($modules) {
+  @{ code=200; msg="OK"; data=@{ data=@(
+       @{ type="DISCOVERY_COLLECTION"; data=$modules }
+     ); loadMoreKey="pick" } } | ConvertTo-Json -Depth 12
+}
+
+$discDefault = New-DiscPayload @(
+  (New-DiscModule "大家都在听" "" @(
+     (New-DiscEpisode "d1" "Why we drift toward the cosmos" "Cosmic Drift" 3480 "2026-06-23T09:00:00.000Z" 1200),
+     (New-DiscEpisode "d2" "Three years remote, five lessons" "Code & Coffee" 2520 "2026-06-24T09:00:00.000Z" 863))),
+  (New-DiscModule "编辑精选" "Hand-picked by our editors" @(
+     (New-DiscEpisode "d3" "Songs that quietly healed you" "Late Night Radio" 3960 "2026-06-21T09:00:00.000Z" 2400)))
+)
+$discTopic = New-DiscPayload @(
+  (New-DiscModule "中年人运动全面指南" "How do we approach movement in our prime years?" @(
+     (New-DiscEpisode "d4" "After 100km across one city" "City Walks" 2220 "2026-06-20T09:00:00.000Z" 517),
+     (New-DiscEpisode "d5" "If a black hole could speak" "Interstellar Nights" 2940 "2026-06-18T09:00:00.000Z" 1000)))
+)
+$discHot = New-DiscPayload @(
+  (New-DiscModule "最热榜" "" @(
+     (New-DiscEpisode "d6" "The science of flavor in a pour-over" "Useless Beauty" 1980 "2026-06-17T09:00:00.000Z" 402)))
+)
+
 # Minimal 0.4s mono 8kHz 8-bit PCM WAV (~3.2KB) so the download+play loop is testable.
 function New-SilenceWav {
   $sr=8000; $secs=0.4; $n=[int]($sr*$secs)
@@ -77,7 +111,14 @@ while ($listener.IsListening) {
     $ctx.Response.Close()
     continue
   }
-  $body = if ($path -like "*subscription*") { $subs }
+  $body = if ($path -like "*discovery-feed*") {
+            $reader = New-Object System.IO.StreamReader($ctx.Request.InputStream)
+            $raw = $reader.ReadToEnd(); $reader.Close()
+            if ($raw -like "*discoveryTopic*") { $discTopic }
+            elseif ($raw -like "*mediumDiscoveryPictorial*") { $discHot }
+            else { $discDefault }
+          }
+          elseif ($path -like "*subscription*") { $subs }
           elseif ($path -like "*episode*") { $episode }
           elseif ($path -like "*comment*") { $comments }
           else { $inbox }
