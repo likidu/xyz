@@ -10,6 +10,7 @@
         <file>VerifyCodePage.qml</file>
         <file>HomePage.qml</file>
         <file>UpdatesPage.qml</file>
+        <file>DiscoveryPage.qml</file>
         <file>SubscriptionsPage.qml</file>
         <file>EpisodePage.qml</file>
         <file>DownloadsPage.qml</file>

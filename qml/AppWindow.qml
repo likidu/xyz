@@ -52,7 +52,11 @@ XyzPageStackWindow {
     }
 
     function handleTab(index) {
-        if (index === 1) {
+        if (index === 0) {
+            if (!pageStack.busy && pageStack.currentPage !== discoveryPage) {
+                pageStack.push(discoveryPage);
+            }
+        } else if (index === 1) {
             while (pageStack.currentPage !== updatesPage && pageStack.depth > 1) {
                 pageStack.pop();
             }
@@ -61,7 +65,6 @@ XyzPageStackWindow {
                 pageStack.push(homePage);
             }
         }
-        // index 0 (Discover) is an inert placeholder for now.
     }
 
     ToolBarLayout {
@@ -147,6 +150,16 @@ XyzPageStackWindow {
     UpdatesPage {
         id: updatesPage
         onMySubsRequested: pageStack.push(subscriptionsPage)
+        onTabSelected: window.handleTab(index)
+        onEpisodeRequested: {
+            episodePage.openWith(item);
+            pageStack.push(episodePage);
+        }
+        onOpenPlayerRequested: window.openNowPlaying()
+    }
+
+    DiscoveryPage {
+        id: discoveryPage
         onTabSelected: window.handleTab(index)
         onEpisodeRequested: {
             episodePage.openWith(item);
