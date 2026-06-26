@@ -45,6 +45,9 @@ XyzApiClient::XyzApiClient(StorageManager *storage, QObject *parent)
     , m_reply(0)
     , m_busy(false)
     , m_requestType(NoneRequest)
+    , m_replayType(NoneRequest)
+    , m_replayIsPost(false)
+    , m_refreshAttempted(false)
     , m_commentsTotal(0)
 {
     m_timeout.setSingleShot(true);
@@ -213,12 +216,38 @@ void XyzApiClient::sendRequest(RequestType type, bool isPost, const QString &pat
 
 void XyzApiClient::startPost(RequestType type, const QString &path, const QVariantMap &body)
 {
+    m_refreshAttempted = false;
+    m_replayType = type;
+    m_replayPath = path;
+    m_replayBody = body;
+    m_replayIsPost = true;
     sendRequest(type, true, path, body);
 }
 
 void XyzApiClient::startGet(RequestType type, const QString &path)
 {
+    m_refreshAttempted = false;
+    m_replayType = type;
+    m_replayPath = path;
+    m_replayBody = QVariantMap();
+    m_replayIsPost = false;
     sendRequest(type, false, path, QVariantMap());
+}
+
+// Refresh uses the content host + content headers, with both tokens in headers
+// and an empty body. Does NOT touch replay state or m_refreshAttempted.
+void XyzApiClient::startRefresh()
+{
+    sendRequest(RefreshRequest, true,
+                QString::fromLatin1("/app_auth_tokens.refresh"),
+                QVariantMap(), /*withRefreshHeader=*/true);
+}
+
+// Re-issue the request that hit 401, now that storage holds a fresh access
+// token. m_refreshAttempted stays true so a second 401 ends in sessionExpired.
+void XyzApiClient::resendReplay()
+{
+    sendRequest(m_replayType, m_replayIsPost, m_replayPath, m_replayBody);
 }
 
 void XyzApiClient::abortActiveRequest()
@@ -249,9 +278,46 @@ void XyzApiClient::onReplyFinished()
 
     const QByteArray payload = reply->readAll();
     const int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    // Captured for the refresh response's header fallback (see parseRefreshTokens).
+    const QByteArray hdrAccess = reply->rawHeader("x-jike-access-token");
+    const QByteArray hdrRefresh = reply->rawHeader("x-jike-refresh-token");
     reply->deleteLater();
 
+    // Outcome of a refresh attempt: on success store new tokens and replay the
+    // original request; on any failure (bad status / no token / 401) log out.
+    if (type == RefreshRequest) {
+        if (statusCode >= 200 && statusCode < 300) {
+            QString newAccess, newRefresh;
+            parseRefreshTokens(payload, hdrAccess, hdrRefresh, newAccess, newRefresh);
+            if (!newAccess.isEmpty()) {
+                if (m_storage) {
+                    m_storage->setValue(QLatin1String("auth.accessToken"), newAccess);
+                    if (!newRefresh.isEmpty()) {
+                        m_storage->setValue(QLatin1String("auth.refreshToken"), newRefresh);
+                    }
+                }
+                resendReplay();          // stays busy; retries the original request
+                return;
+            }
+        }
+        m_refreshAttempted = false;
+        setBusy(false);
+        emit sessionExpired();
+        return;
+    }
+
     if (statusCode == 401) {
+        // First 401 on a normal request: try a one-shot refresh, then replay it.
+        const QString refreshToken = m_storage
+            ? m_storage->value(QLatin1String("auth.refreshToken"))
+            : QString();
+        if (!m_refreshAttempted && !refreshToken.isEmpty()) {
+            m_refreshAttempted = true;
+            startRefresh();              // stays busy; replay state already saved
+            return;
+        }
+        // Already refreshed once, or no refresh token available → give up.
+        m_refreshAttempted = false;
         setBusy(false);
         emit sessionExpired();
         return;
@@ -360,10 +426,50 @@ void XyzApiClient::onReplyFinished()
 
 void XyzApiClient::onTimeout()
 {
+    const RequestType type = m_requestType;
     abortActiveRequest();
     m_requestType = NoneRequest;
+    // A refresh that times out cannot recover the session → log out, matching the
+    // spec's "any refresh failure → sessionExpired" rule.
+    if (type == RefreshRequest) {
+        m_refreshAttempted = false;
+        setBusy(false);
+        emit sessionExpired();
+        return;
+    }
     setErrorMessage(QString::fromLatin1("Request timed out."));
     setBusy(false);
+}
+
+// New tokens arrive as response BODY keys (the ultrazg/xyz proxy reads
+// /app_auth_tokens.refresh's body); some shapes wrap them under "data". Fall
+// back to response headers, mirroring AuthClient's tolerant login parsing.
+void XyzApiClient::parseRefreshTokens(const QByteArray &payload,
+                                      const QByteArray &hdrAccess,
+                                      const QByteArray &hdrRefresh,
+                                      QString &outAccess, QString &outRefresh) const
+{
+    outAccess.clear();
+    outRefresh.clear();
+
+    QJson::Parser parser;
+    bool ok = false;
+    const QVariant root = parser.parse(payload, &ok);
+    if (ok) {
+        QVariantMap map = root.toMap();
+        const QVariantMap data = map.value(QString::fromLatin1("data")).toMap();
+        if (!data.isEmpty()) {
+            map = data;
+        }
+        outAccess = map.value(QString::fromLatin1("x-jike-access-token")).toString();
+        outRefresh = map.value(QString::fromLatin1("x-jike-refresh-token")).toString();
+    }
+    if (outAccess.isEmpty() && !hdrAccess.isEmpty()) {
+        outAccess = QString::fromUtf8(hdrAccess);
+    }
+    if (outRefresh.isEmpty() && !hdrRefresh.isEmpty()) {
+        outRefresh = QString::fromUtf8(hdrRefresh);
+    }
 }
 
 void XyzApiClient::onSslErrors(const QList<QSslError> &errors)
