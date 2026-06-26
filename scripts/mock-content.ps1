@@ -65,9 +65,12 @@ function New-DiscModule($title, $desc, $items) {
   @{ title=$title; moduleType="X"; targetType="EPISODE"; description=$desc; target=$items }
 }
 function New-DiscPayload($modules) {
-  @{ code=200; msg="OK"; data=@{ data=@(
+  # Real upstream shape: feed entries live directly under top-level "data" (single-nested),
+  # like inbox/subscription. The proxy DOC double-wraps (data.data) because ReturnJson nests
+  # the whole upstream body under another "data" — that wrapper is a proxy artifact.
+  @{ code=200; msg="OK"; loadMoreKey="pick"; data=@(
        @{ type="DISCOVERY_COLLECTION"; data=$modules }
-     ); loadMoreKey="pick" } } | ConvertTo-Json -Depth 12
+     ) } | ConvertTo-Json -Depth 12
 }
 
 $discDefault = New-DiscPayload @(

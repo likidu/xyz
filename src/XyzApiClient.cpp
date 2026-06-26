@@ -641,15 +641,22 @@ QVariantMap XyzApiClient::shapeComment(const QVariantMap &item) const
     return out;
 }
 
-// Discovery responses are double-nested: data.data[] holds feed entries; each
-// DISCOVERY_COLLECTION entry holds a data[] of modules. We keep only EPISODE-target
+// The real upstream returns feed entries directly under the top-level "data" key
+// ({"data":[...],"loadMoreKey":...}), like inbox/subscription — NOT data.data[]. The
+// proxy DOC shows data.data only because its ReturnJson nests the whole upstream body
+// under another "data"; that wrapper is a proxy artifact. We read top-level data[] and
+// fall back to data.data[] so a proxy-shaped response still parses. Each
+// DISCOVERY_COLLECTION entry holds a data[] of modules; we keep only EPISODE-target
 // modules (episode-only decision) and turn each into a {title, subtitle, items} section.
 QVariantList XyzApiClient::shapeDiscoverySections(const QVariant &root) const
 {
     QVariantList sections;
     const QVariantMap top = root.toMap();
-    const QVariantList entries = top.value(QString::fromLatin1("data")).toMap()
-                                    .value(QString::fromLatin1("data")).toList();
+    const QVariant dataNode = top.value(QString::fromLatin1("data"));
+    QVariantList entries = dataNode.toList();
+    if (entries.isEmpty()) {
+        entries = dataNode.toMap().value(QString::fromLatin1("data")).toList();
+    }
     for (int i = 0; i < entries.size(); ++i) {
         const QVariantMap entry = entries.at(i).toMap();
         if (entry.value(QString::fromLatin1("type")).toString()
