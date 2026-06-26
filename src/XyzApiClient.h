@@ -66,7 +66,7 @@ private slots:
 private:
     enum RequestType { NoneRequest, InboxRequest, SubscriptionsRequest,
                        EpisodeRequest, CommentsRequest, MoreCommentsRequest,
-                       DiscoveryDefault, DiscoveryTopic, DiscoveryHot };
+                       DiscoveryRequest };
 
     void startPost(RequestType type, const QString &path, const QVariantMap &body);
     void startGet(RequestType type, const QString &path);
@@ -79,9 +79,15 @@ private:
     QVariantMap shapeSubscription(const QVariantMap &item) const;
     QVariantMap shapeEpisode(const QVariantMap &item) const;
     QVariantMap shapeComment(const QVariantMap &item) const;
-    void startDiscoveryPhase(int phase);
-    void finishDiscoveryPhase(const QVariantList &sections, bool ok);
+    void startDiscoveryPage(const QString &loadMoreKey);
+    void finishDiscoveryPage(const QVariantList &sections, const QString &nextKey, bool ok);
     QVariantList shapeDiscoverySections(const QVariant &root) const;
+    // Build a {title, subtitle, items} section from a list of target wrappers, pulling the
+    // episode out of each wrapper under episodeKey ("episode" for target/picks, "item" for
+    // top-list rows). Appends only if at least one episode shaped.
+    void appendEpisodeSection(QVariantList &sections, const QString &title,
+                              const QString &subtitle, const QVariantList &targets,
+                              const QString &episodeKey) const;
     QVariantMap shapeDiscoveryEpisode(const QVariantMap &episode) const;
     QString pickImageUrl(const QVariantMap &image) const;
     QString relativeTime(const QString &iso) const;
@@ -103,8 +109,7 @@ private:
     QVariantMap m_commentsLoadMoreKey;
     int m_commentsTotal;
     QVariantList m_discoverySections;
-    QVariantList m_discBuckets[3];
-    int m_discPhase;
+    int m_discPageCount;   // pages walked this fetch (loadMoreKey pagination, capped)
     bool m_discAnyOk;
 };
 

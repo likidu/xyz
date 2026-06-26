@@ -53,42 +53,49 @@ $comments = @{ code=200; msg="OK"; totalCount=128; data=@(
      author=@{ nickname="Pico"; avatar=@{ picture=@{ thumbnailUrl=$img } } } }
 ) } | ConvertTo-Json -Depth 8
 
-# discovery-feed/list is double-nested (data.data[]) and selected by loadMoreKey.
-function New-DiscEpisode($eid, $title, $show, $dur, $when, $comments) {
-  @{ episode = @{ type="EPISODE"; eid=$eid; title=$title; duration=$dur;
-       pubDate=$when; commentCount=$comments;
-       image=@{ thumbnailUrl=$img; smallPicUrl=$img };
-       podcast=@{ title=$show; image=@{ smallPicUrl=$img; thumbnailUrl=$img } } };
-     recommendation="" }
+# discovery-feed/list: REAL shape. Entries live directly under top-level "data" (single-
+# nested). The feed is a loadMoreKey pagination walk: page0 -> topList -> discoveryTopic ->
+# pick -> end. Each entry is {type, data}; episodes sit in a different place per type
+# (target[].episode, picks[].episode, items[].item). Mirrors the live feed so the mock
+# can't mask a parser bug again.
+function New-Ep($eid, $title, $show, $dur, $when, $comments) {
+  @{ type="EPISODE"; eid=$eid; title=$title; duration=$dur; pubDate=$when; commentCount=$comments;
+     image=@{ thumbnailUrl=$img; smallPicUrl=$img };
+     podcast=@{ title=$show; image=@{ smallPicUrl=$img; thumbnailUrl=$img } } }
 }
-function New-DiscModule($title, $desc, $items) {
-  @{ title=$title; moduleType="X"; targetType="EPISODE"; description=$desc; target=$items }
-}
-function New-DiscPayload($modules) {
-  # Real upstream shape: feed entries live directly under top-level "data" (single-nested),
-  # like inbox/subscription. The proxy DOC double-wraps (data.data) because ReturnJson nests
-  # the whole upstream body under another "data" — that wrapper is a proxy artifact.
-  @{ code=200; msg="OK"; loadMoreKey="pick"; data=@(
-       @{ type="DISCOVERY_COLLECTION"; data=$modules }
-     ) } | ConvertTo-Json -Depth 12
+function Disc-Page($entries, $next) {
+  @{ code=200; msg="OK"; loadMoreKey=$next; data=$entries } | ConvertTo-Json -Depth 14
 }
 
-$discDefault = New-DiscPayload @(
-  (New-DiscModule "大家都在听" "" @(
-     (New-DiscEpisode "d1" "Why we drift toward the cosmos" "Cosmic Drift" 3480 "2026-06-23T09:00:00.000Z" 1200),
-     (New-DiscEpisode "d2" "Three years remote, five lessons" "Code & Coffee" 2520 "2026-06-24T09:00:00.000Z" 863))),
-  (New-DiscModule "编辑精选" "Hand-picked by our editors" @(
-     (New-DiscEpisode "d3" "Songs that quietly healed you" "Late Night Radio" 3960 "2026-06-21T09:00:00.000Z" 2400)))
-)
-$discTopic = New-DiscPayload @(
-  (New-DiscModule "中年人运动全面指南" "How do we approach movement in our prime years?" @(
-     (New-DiscEpisode "d4" "After 100km across one city" "City Walks" 2220 "2026-06-20T09:00:00.000Z" 517),
-     (New-DiscEpisode "d5" "If a black hole could speak" "Interstellar Nights" 2940 "2026-06-18T09:00:00.000Z" 1000)))
-)
-$discHot = New-DiscPayload @(
-  (New-DiscModule "最热榜" "" @(
-     (New-DiscEpisode "d6" "The science of flavor in a pour-over" "Useless Beauty" 1980 "2026-06-17T09:00:00.000Z" 402)))
-)
+# page 0 (no key): recommendation + editor pick (+ a skipped header), next -> topList
+$discPage0 = Disc-Page @(
+  @{ type="DISCOVERY_HEADER"; data=@() },
+  @{ type="DISCOVERY_EPISODE_RECOMMEND"; data=@{ title="为你推荐"; targetType="EPISODE"; target=@(
+       @{ episode=(New-Ep "d1" "Why we drift toward the cosmos" "Cosmic Drift" 3480 "2026-06-23T09:00:00.000Z" 1200) },
+       @{ episode=(New-Ep "d2" "Three years remote, five lessons" "Code & Coffee" 2520 "2026-06-24T09:00:00.000Z" 863) }) } },
+  @{ type="EDITOR_PICK"; data=@{ picks=@(
+       @{ episode=(New-Ep "d3" "Songs that quietly healed you" "Late Night Radio" 3960 "2026-06-21T09:00:00.000Z" 2400) }) } }
+) "topList"
+
+# page 1 (topList): TOP_LIST with one EPISODE board (episodes under items[].item), next -> discoveryTopic
+$discPage1 = Disc-Page @(
+  @{ type="TOP_LIST"; data=@(
+       @{ title="最热榜"; targetType="EPISODE"; items=@(
+            @{ item=(New-Ep "d4" "The science of flavor in a pour-over" "Useless Beauty" 1980 "2026-06-17T09:00:00.000Z" 402) }) }) }
+) "discoveryTopic"
+
+# page 2 (discoveryTopic): DISCOVERY_COLLECTION with a PODCAST module (skipped) + an EPISODE module, next -> pick
+$discPage2 = Disc-Page @(
+  @{ type="DISCOVERY_COLLECTION"; data=@(
+       @{ title="为你精选的节目"; targetType="PODCAST"; target=@(@{ podcast=@{ title="Some Show" } }) },
+       @{ title="中年人运动全面指南"; description="How do we approach movement in our prime years?"; targetType="EPISODE"; target=@(
+            @{ episode=(New-Ep "d5" "After 100km across one city" "City Walks" 2220 "2026-06-20T09:00:00.000Z" 517) }) }) }
+) "pick"
+
+# page 3 (pick): skip-only entry, end of walk (empty loadMoreKey)
+$discPage3 = Disc-Page @(
+  @{ type="DISCOVERY_PICK"; data=@() }
+) ""
 
 # Minimal 0.4s mono 8kHz 8-bit PCM WAV (~3.2KB) so the download+play loop is testable.
 function New-SilenceWav {
@@ -117,9 +124,11 @@ while ($listener.IsListening) {
   $body = if ($path -like "*discovery-feed*") {
             $reader = New-Object System.IO.StreamReader($ctx.Request.InputStream)
             $raw = $reader.ReadToEnd(); $reader.Close()
-            if ($raw -like "*discoveryTopic*") { $discTopic }
-            elseif ($raw -like "*mediumDiscoveryPictorial*") { $discHot }
-            else { $discDefault }
+            # Serve the page matching the loadMoreKey cursor the client echoes back.
+            if ($raw -like "*topList*") { $discPage1 }
+            elseif ($raw -like "*discoveryTopic*") { $discPage2 }
+            elseif ($raw -like "*pick*") { $discPage3 }
+            else { $discPage0 }
           }
           elseif ($path -like "*subscription*") { $subs }
           elseif ($path -like "*episode*") { $episode }

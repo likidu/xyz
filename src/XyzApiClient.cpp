@@ -46,7 +46,7 @@ XyzApiClient::XyzApiClient(StorageManager *storage, QObject *parent)
     , m_busy(false)
     , m_requestType(NoneRequest)
     , m_commentsTotal(0)
-    , m_discPhase(0)
+    , m_discPageCount(0)
     , m_discAnyOk(false)
 {
     m_timeout.setSingleShot(true);
@@ -128,55 +128,44 @@ void XyzApiClient::loadMoreComments()
     startPost(MoreCommentsRequest, QString::fromLatin1("/v1/comment/list-primary"), body);
 }
 
-// Discovery feed: three sequential POSTs to the same endpoint, each selecting a
-// different set of sections via loadMoreKey. Sequential (not concurrent) because the
-// client is single-reply. Results land in ordered buckets and emit once at the end.
+// Discovery feed: a paginated walk. Start with no loadMoreKey, then follow the
+// loadMoreKey each response returns (page 0 → topList → discoveryTopic → pick → end),
+// accumulating EPISODE sections until the key is empty. Sequential (the client is
+// single-reply); capped so a misbehaving cursor can't loop forever.
 void XyzApiClient::fetchDiscovery()
 {
-    m_discBuckets[0].clear();
-    m_discBuckets[1].clear();
-    m_discBuckets[2].clear();
-    m_discPhase = 0;
+    m_discoverySections.clear();
+    m_discPageCount = 0;
     m_discAnyOk = false;
-    startDiscoveryPhase(0);
+    startDiscoveryPage(QString());
 }
 
-void XyzApiClient::startDiscoveryPhase(int phase)
+void XyzApiClient::startDiscoveryPage(const QString &loadMoreKey)
 {
     QVariantMap body;
     body.insert(QString::fromLatin1("returnAll"), QString::fromLatin1("false"));
-    RequestType type = DiscoveryDefault;
-    if (phase == 1) {
-        body.insert(QString::fromLatin1("loadMoreKey"), QString::fromLatin1("discoveryTopic"));
-        type = DiscoveryTopic;
-    } else if (phase == 2) {
-        body.insert(QString::fromLatin1("loadMoreKey"), QString::fromLatin1("mediumDiscoveryPictorial"));
-        type = DiscoveryHot;
+    if (!loadMoreKey.isEmpty()) {
+        body.insert(QString::fromLatin1("loadMoreKey"), loadMoreKey);
     }
-    startPost(type, QString::fromLatin1("/v1/discovery-feed/list"), body);
+    startPost(DiscoveryRequest, QString::fromLatin1("/v1/discovery-feed/list"), body);
 }
 
-// Store this phase's sections, then either fire the next phase or finalize + emit.
-void XyzApiClient::finishDiscoveryPhase(const QVariantList &sections, bool ok)
+// Accumulate this page's sections, then either fetch the next page (if the response
+// gave a loadMoreKey and we're under the cap) or finalize + emit.
+void XyzApiClient::finishDiscoveryPage(const QVariantList &sections, const QString &nextKey, bool ok)
 {
-    if (m_discPhase >= 0 && m_discPhase < 3) {
-        m_discBuckets[m_discPhase] = sections;
-    }
+    m_discoverySections += sections;
     if (ok) {
         m_discAnyOk = true;
     }
-    if (m_discPhase < 2) {
-        ++m_discPhase;
-        startDiscoveryPhase(m_discPhase);   // keeps busy == true across the chain
+    ++m_discPageCount;
+    if (ok && !nextKey.isEmpty() && m_discPageCount < 6) {
+        startDiscoveryPage(nextKey);   // keeps busy == true across the walk
         return;
     }
-    QVariantList all;
-    all += m_discBuckets[0];
-    all += m_discBuckets[1];
-    all += m_discBuckets[2];
     setBusy(false);
     if (!m_discAnyOk) {
-        // Every phase failed at the HTTP/parse level. Surface an error and do NOT
+        // The first page failed at the HTTP/parse level. Surface an error and do NOT
         // emit discoveryLoaded, so the page's loadedOnce stays false and a transient
         // failure retries on the next activation (mirrors fetchInbox on error).
         if (m_errorMessage.isEmpty()) {
@@ -184,7 +173,6 @@ void XyzApiClient::finishDiscoveryPhase(const QVariantList &sections, bool ok)
         }
         return;
     }
-    m_discoverySections = all;
     emit discoveryLoaded();
 }
 
@@ -235,8 +223,7 @@ void XyzApiClient::applyContentHeaders(QNetworkRequest &request)
 
     // The discovery feed requires the abtest opt-in header (per ultrazg/xyz
     // handlers/discovery.go); other content endpoints work without it.
-    if (m_requestType == DiscoveryDefault || m_requestType == DiscoveryTopic
-        || m_requestType == DiscoveryHot) {
+    if (m_requestType == DiscoveryRequest) {
         request.setRawHeader("abtest-info", "{\"old_user_discovery_feed\":\"enable\"}");
     }
 }
@@ -319,7 +306,7 @@ void XyzApiClient::onReplyFinished()
     m_reply = 0;
     const RequestType type = m_requestType;
     m_requestType = NoneRequest;
-    const bool isDiscovery = (type == DiscoveryDefault || type == DiscoveryTopic || type == DiscoveryHot);
+    const bool isDiscovery = (type == DiscoveryRequest);
 
     const QByteArray payload = reply->readAll();
     const int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
@@ -332,7 +319,7 @@ void XyzApiClient::onReplyFinished()
     }
 
     if (statusCode < 200 || statusCode >= 300) {
-        if (isDiscovery) { finishDiscoveryPhase(QVariantList(), false); return; }
+        if (isDiscovery) { finishDiscoveryPage(QVariantList(), QString(), false); return; }
         QString detail;
         QJson::Parser parser;
         bool ok = false;
@@ -364,7 +351,7 @@ void XyzApiClient::onReplyFinished()
     bool ok = false;
     const QVariant root = parser.parse(payload, &ok);
     if (!ok) {
-        if (isDiscovery) { finishDiscoveryPhase(QVariantList(), false); return; }
+        if (isDiscovery) { finishDiscoveryPage(QVariantList(), QString(), false); return; }
         setErrorMessage(QString::fromLatin1("Failed to parse response."));
         setBusy(false);
         return;
@@ -432,7 +419,8 @@ void XyzApiClient::onReplyFinished()
     }
 
     if (isDiscovery) {
-        finishDiscoveryPhase(shapeDiscoverySections(root), true);
+        const QString nextKey = top.value(QString::fromLatin1("loadMoreKey")).toString();
+        finishDiscoveryPage(shapeDiscoverySections(root), nextKey, true);
         return;
     }
 
@@ -641,15 +629,43 @@ QVariantMap XyzApiClient::shapeComment(const QVariantMap &item) const
     return out;
 }
 
+// Pull the episode from each wrapper (under episodeKey) and append a {title, subtitle,
+// items} section. The wrapper key differs by feed type: "episode" for target/picks rows,
+// "item" for top-list rows. Skips a section with no shaped episodes.
+void XyzApiClient::appendEpisodeSection(QVariantList &sections, const QString &title,
+                                        const QString &subtitle, const QVariantList &targets,
+                                        const QString &episodeKey) const
+{
+    QVariantList items;
+    for (int k = 0; k < targets.size(); ++k) {
+        const QVariantMap episode = targets.at(k).toMap().value(episodeKey).toMap();
+        if (!episode.isEmpty()) {
+            items.append(shapeDiscoveryEpisode(episode));
+        }
+    }
+    if (items.isEmpty()) {
+        return;
+    }
+    QVariantMap section;
+    section.insert(QString::fromLatin1("title"), title);
+    section.insert(QString::fromLatin1("subtitle"), subtitle);
+    section.insert(QString::fromLatin1("items"), items);
+    sections.append(section);
+}
+
 // The real upstream returns feed entries directly under the top-level "data" key
-// ({"data":[...],"loadMoreKey":...}), like inbox/subscription — NOT data.data[]. The
-// proxy DOC shows data.data only because its ReturnJson nests the whole upstream body
-// under another "data"; that wrapper is a proxy artifact. We read top-level data[] and
-// fall back to data.data[] so a proxy-shaped response still parses. Each
-// DISCOVERY_COLLECTION entry holds a data[] of modules; we keep only EPISODE-target
-// modules (episode-only decision) and turn each into a {title, subtitle, items} section.
+// ({"data":[...],"loadMoreKey":...}), like inbox/subscription -- NOT data.data[] (the
+// proxy DOC's extra "data" is a ReturnJson artifact; we fall back to it just in case).
+// Each entry is {type, data}; the EPISODE-bearing types and where the episodes live
+// (confirmed against the live feed, 2026-06-26):
+//   DISCOVERY_EPISODE_RECOMMEND  data{title, targetType, target[].episode}
+//   EDITOR_PICK                  data{picks[].episode}   (no title -> hardcoded label)
+//   TOP_LIST                     data[]{title, items[].item}   (hot / rising / new-star)
+//   DISCOVERY_COLLECTION         data[]{title, targetType, target[].episode}
+// Everything else (headers, pictorials, PODCAST modules, NEW_POWER, banners...) is skipped.
 QVariantList XyzApiClient::shapeDiscoverySections(const QVariant &root) const
 {
+    static const QString kEpisode = QString::fromLatin1("EPISODE");
     QVariantList sections;
     const QVariantMap top = root.toMap();
     const QVariant dataNode = top.value(QString::fromLatin1("data"));
@@ -659,37 +675,44 @@ QVariantList XyzApiClient::shapeDiscoverySections(const QVariant &root) const
     }
     for (int i = 0; i < entries.size(); ++i) {
         const QVariantMap entry = entries.at(i).toMap();
-        if (entry.value(QString::fromLatin1("type")).toString()
-            != QString::fromLatin1("DISCOVERY_COLLECTION")) {
-            continue;   // skip NEW_POWER and other non-collection entries
-        }
-        const QVariantList modules = entry.value(QString::fromLatin1("data")).toList();
-        for (int j = 0; j < modules.size(); ++j) {
-            const QVariantMap mod = modules.at(j).toMap();
-            if (mod.value(QString::fromLatin1("targetType")).toString()
-                != QString::fromLatin1("EPISODE")) {
-                continue;   // skip PODCAST modules — no podcast detail page yet
+        const QString type = entry.value(QString::fromLatin1("type")).toString();
+        const QVariant data = entry.value(QString::fromLatin1("data"));
+
+        if (type == QString::fromLatin1("DISCOVERY_EPISODE_RECOMMEND")) {
+            const QVariantMap m = data.toMap();
+            if (m.value(QString::fromLatin1("targetType")).toString() == kEpisode) {
+                appendEpisodeSection(sections, m.value(QString::fromLatin1("title")).toString(),
+                                     QString(), m.value(QString::fromLatin1("target")).toList(),
+                                     QString::fromLatin1("episode"));
             }
-            QVariantList items;
-            const QVariantList targets = mod.value(QString::fromLatin1("target")).toList();
-            for (int k = 0; k < targets.size(); ++k) {
-                const QVariantMap episode = targets.at(k).toMap()
-                                               .value(QString::fromLatin1("episode")).toMap();
-                if (episode.isEmpty()) {
-                    continue;
+        } else if (type == QString::fromLatin1("EDITOR_PICK")) {
+            // No title field on this entry -- label it "编辑精选" (UTF-8 escaped).
+            const QVariantMap m = data.toMap();
+            appendEpisodeSection(sections,
+                                 QString::fromUtf8("\xE7\xBC\x96\xE8\xBE\x91\xE7\xB2\xBE\xE9\x80\x89"),
+                                 QString(), m.value(QString::fromLatin1("picks")).toList(),
+                                 QString::fromLatin1("episode"));
+        } else if (type == QString::fromLatin1("TOP_LIST")) {
+            const QVariantList boards = data.toList();
+            for (int b = 0; b < boards.size(); ++b) {
+                const QVariantMap board = boards.at(b).toMap();
+                if (board.value(QString::fromLatin1("targetType")).toString() == kEpisode) {
+                    appendEpisodeSection(sections, board.value(QString::fromLatin1("title")).toString(),
+                                         QString(), board.value(QString::fromLatin1("items")).toList(),
+                                         QString::fromLatin1("item"));
                 }
-                items.append(shapeDiscoveryEpisode(episode));
             }
-            if (items.isEmpty()) {
-                continue;
+        } else if (type == QString::fromLatin1("DISCOVERY_COLLECTION")) {
+            const QVariantList modules = data.toList();
+            for (int j = 0; j < modules.size(); ++j) {
+                const QVariantMap mod = modules.at(j).toMap();
+                if (mod.value(QString::fromLatin1("targetType")).toString() == kEpisode) {
+                    appendEpisodeSection(sections, mod.value(QString::fromLatin1("title")).toString(),
+                                         mod.value(QString::fromLatin1("description")).toString(),
+                                         mod.value(QString::fromLatin1("target")).toList(),
+                                         QString::fromLatin1("episode"));
+                }
             }
-            QVariantMap section;
-            section.insert(QString::fromLatin1("title"),
-                           mod.value(QString::fromLatin1("title")).toString());
-            section.insert(QString::fromLatin1("subtitle"),
-                           mod.value(QString::fromLatin1("description")).toString());
-            section.insert(QString::fromLatin1("items"), items);
-            sections.append(section);
         }
     }
     return sections;
