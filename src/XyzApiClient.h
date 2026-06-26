@@ -25,6 +25,7 @@ class XyzApiClient : public QObject
     Q_PROPERTY(QVariantList comments READ comments NOTIFY commentsLoaded)
     Q_PROPERTY(int commentsTotal READ commentsTotal NOTIFY commentsLoaded)
     Q_PROPERTY(bool hasMoreComments READ hasMoreComments NOTIFY commentsLoaded)
+    Q_PROPERTY(QVariantList discoverySections READ discoverySections NOTIFY discoveryLoaded)
 
 public:
     explicit XyzApiClient(StorageManager *storage, QObject *parent = 0);
@@ -37,6 +38,7 @@ public:
     QVariantList comments() const;
     int commentsTotal() const;
     bool hasMoreComments() const;
+    QVariantList discoverySections() const;
 
     Q_INVOKABLE void fetchInbox();
     Q_INVOKABLE void fetchSubscriptions();
@@ -44,6 +46,7 @@ public:
     Q_INVOKABLE void fetchComments(const QString &eid);
     // Append the next page using the loadMoreKey returned by the last comments fetch.
     Q_INVOKABLE void loadMoreComments();
+    Q_INVOKABLE void fetchDiscovery();
 
 signals:
     void busyChanged();
@@ -52,6 +55,7 @@ signals:
     void subscriptionsLoaded();
     void episodeLoaded();
     void commentsLoaded();
+    void discoveryLoaded();
     void sessionExpired();
 
 private slots:
@@ -61,7 +65,8 @@ private slots:
 
 private:
     enum RequestType { NoneRequest, InboxRequest, SubscriptionsRequest,
-                       EpisodeRequest, CommentsRequest, MoreCommentsRequest };
+                       EpisodeRequest, CommentsRequest, MoreCommentsRequest,
+                       DiscoveryDefault, DiscoveryTopic, DiscoveryHot };
 
     void startPost(RequestType type, const QString &path, const QVariantMap &body);
     void startGet(RequestType type, const QString &path);
@@ -74,6 +79,10 @@ private:
     QVariantMap shapeSubscription(const QVariantMap &item) const;
     QVariantMap shapeEpisode(const QVariantMap &item) const;
     QVariantMap shapeComment(const QVariantMap &item) const;
+    void startDiscoveryPhase(int phase);
+    void finishDiscoveryPhase(const QVariantList &sections);
+    QVariantList shapeDiscoverySections(const QVariant &root) const;
+    QVariantMap shapeDiscoveryEpisode(const QVariantMap &episode) const;
     QString pickImageUrl(const QVariantMap &image) const;
     QString relativeTime(const QString &iso) const;
 
@@ -93,6 +102,9 @@ private:
     QString m_commentsEid;
     QVariantMap m_commentsLoadMoreKey;
     int m_commentsTotal;
+    QVariantList m_discoverySections;
+    QVariantList m_discBuckets[3];
+    int m_discPhase;
 };
 
 #endif // XYZAPICLIENT_H

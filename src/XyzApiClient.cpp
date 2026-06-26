@@ -46,6 +46,7 @@ XyzApiClient::XyzApiClient(StorageManager *storage, QObject *parent)
     , m_busy(false)
     , m_requestType(NoneRequest)
     , m_commentsTotal(0)
+    , m_discPhase(0)
 {
     m_timeout.setSingleShot(true);
     connect(&m_timeout, SIGNAL(timeout()), this, SLOT(onTimeout()));
@@ -59,6 +60,7 @@ QVariantMap XyzApiClient::episode() const { return m_episode; }
 QVariantList XyzApiClient::comments() const { return m_comments; }
 int XyzApiClient::commentsTotal() const { return m_commentsTotal; }
 bool XyzApiClient::hasMoreComments() const { return !m_commentsLoadMoreKey.isEmpty(); }
+QVariantList XyzApiClient::discoverySections() const { return m_discoverySections; }
 
 void XyzApiClient::fetchInbox()
 {
@@ -123,6 +125,56 @@ void XyzApiClient::loadMoreComments()
     body.insert(QString::fromLatin1("owner"), owner);
     body.insert(QString::fromLatin1("loadMoreKey"), m_commentsLoadMoreKey);
     startPost(MoreCommentsRequest, QString::fromLatin1("/v1/comment/list-primary"), body);
+}
+
+// Discovery feed: three sequential POSTs to the same endpoint, each selecting a
+// different set of sections via loadMoreKey. Sequential (not concurrent) because the
+// client is single-reply. Results land in ordered buckets and emit once at the end.
+void XyzApiClient::fetchDiscovery()
+{
+    m_discBuckets[0].clear();
+    m_discBuckets[1].clear();
+    m_discBuckets[2].clear();
+    m_discPhase = 0;
+    startDiscoveryPhase(0);
+}
+
+void XyzApiClient::startDiscoveryPhase(int phase)
+{
+    QVariantMap body;
+    body.insert(QString::fromLatin1("returnAll"), QString::fromLatin1("false"));
+    RequestType type = DiscoveryDefault;
+    if (phase == 1) {
+        body.insert(QString::fromLatin1("loadMoreKey"), QString::fromLatin1("discoveryTopic"));
+        type = DiscoveryTopic;
+    } else if (phase == 2) {
+        body.insert(QString::fromLatin1("loadMoreKey"), QString::fromLatin1("mediumDiscoveryPictorial"));
+        type = DiscoveryHot;
+    }
+    startPost(type, QString::fromLatin1("/v1/discovery-feed/list"), body);
+}
+
+// Store this phase's sections, then either fire the next phase or finalize + emit.
+void XyzApiClient::finishDiscoveryPhase(const QVariantList &sections)
+{
+    if (m_discPhase >= 0 && m_discPhase < 3) {
+        m_discBuckets[m_discPhase] = sections;
+    }
+    if (m_discPhase < 2) {
+        ++m_discPhase;
+        startDiscoveryPhase(m_discPhase);   // keeps busy == true across the chain
+        return;
+    }
+    QVariantList all;
+    all += m_discBuckets[0];
+    all += m_discBuckets[1];
+    all += m_discBuckets[2];
+    m_discoverySections = all;
+    setBusy(false);
+    if (all.isEmpty() && m_errorMessage.isEmpty()) {
+        setErrorMessage(QString::fromLatin1("No discovery content."));
+    }
+    emit discoveryLoaded();
 }
 
 void XyzApiClient::setBusy(bool busy)
@@ -249,6 +301,7 @@ void XyzApiClient::onReplyFinished()
     m_reply = 0;
     const RequestType type = m_requestType;
     m_requestType = NoneRequest;
+    const bool isDiscovery = (type == DiscoveryDefault || type == DiscoveryTopic || type == DiscoveryHot);
 
     const QByteArray payload = reply->readAll();
     const int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
@@ -261,6 +314,7 @@ void XyzApiClient::onReplyFinished()
     }
 
     if (statusCode < 200 || statusCode >= 300) {
+        if (isDiscovery) { finishDiscoveryPhase(QVariantList()); return; }
         QString detail;
         QJson::Parser parser;
         bool ok = false;
@@ -292,6 +346,7 @@ void XyzApiClient::onReplyFinished()
     bool ok = false;
     const QVariant root = parser.parse(payload, &ok);
     if (!ok) {
+        if (isDiscovery) { finishDiscoveryPhase(QVariantList()); return; }
         setErrorMessage(QString::fromLatin1("Failed to parse response."));
         setBusy(false);
         return;
@@ -355,6 +410,11 @@ void XyzApiClient::onReplyFinished()
         m_commentsLoadMoreKey = top.value(QString::fromLatin1("loadMoreKey")).toMap();
         setBusy(false);
         emit commentsLoaded();
+        return;
+    }
+
+    if (isDiscovery) {
+        finishDiscoveryPhase(shapeDiscoverySections(root));
         return;
     }
 
@@ -560,5 +620,80 @@ QVariantMap XyzApiClient::shapeComment(const QVariantMap &item) const
     out.insert(QString::fromLatin1("likes"),
                QString::number(item.value(QString::fromLatin1("likeCount")).toInt()));
 
+    return out;
+}
+
+// Discovery responses are double-nested: data.data[] holds feed entries; each
+// DISCOVERY_COLLECTION entry holds a data[] of modules. We keep only EPISODE-target
+// modules (episode-only decision) and turn each into a {title, subtitle, items} section.
+QVariantList XyzApiClient::shapeDiscoverySections(const QVariant &root) const
+{
+    QVariantList sections;
+    const QVariantMap top = root.toMap();
+    const QVariantList entries = top.value(QString::fromLatin1("data")).toMap()
+                                    .value(QString::fromLatin1("data")).toList();
+    for (int i = 0; i < entries.size(); ++i) {
+        const QVariantMap entry = entries.at(i).toMap();
+        if (entry.value(QString::fromLatin1("type")).toString()
+            != QString::fromLatin1("DISCOVERY_COLLECTION")) {
+            continue;   // skip NEW_POWER and other non-collection entries
+        }
+        const QVariantList modules = entry.value(QString::fromLatin1("data")).toList();
+        for (int j = 0; j < modules.size(); ++j) {
+            const QVariantMap mod = modules.at(j).toMap();
+            if (mod.value(QString::fromLatin1("targetType")).toString()
+                != QString::fromLatin1("EPISODE")) {
+                continue;   // skip PODCAST modules — no podcast detail page yet
+            }
+            QVariantList items;
+            const QVariantList targets = mod.value(QString::fromLatin1("target")).toList();
+            for (int k = 0; k < targets.size(); ++k) {
+                const QVariantMap episode = targets.at(k).toMap()
+                                               .value(QString::fromLatin1("episode")).toMap();
+                if (episode.isEmpty()) {
+                    continue;
+                }
+                items.append(shapeDiscoveryEpisode(episode));
+            }
+            if (items.isEmpty()) {
+                continue;
+            }
+            QVariantMap section;
+            section.insert(QString::fromLatin1("title"),
+                           mod.value(QString::fromLatin1("title")).toString());
+            section.insert(QString::fromLatin1("subtitle"),
+                           mod.value(QString::fromLatin1("description")).toString());
+            section.insert(QString::fromLatin1("items"), items);
+            sections.append(section);
+        }
+    }
+    return sections;
+}
+
+// One episode → the card/tap map. Superset of EpisodePage.openWith's seed; showName
+// and commentCount drive the card foot.
+QVariantMap XyzApiClient::shapeDiscoveryEpisode(const QVariantMap &episode) const
+{
+    QVariantMap out;
+    out.insert(QString::fromLatin1("eid"), episode.value(QString::fromLatin1("eid")).toString());
+
+    QString cover = pickImageUrl(episode.value(QString::fromLatin1("image")).toMap());
+    const QVariantMap podcast = episode.value(QString::fromLatin1("podcast")).toMap();
+    if (cover.isEmpty()) {
+        cover = pickImageUrl(podcast.value(QString::fromLatin1("image")).toMap());
+    }
+    out.insert(QString::fromLatin1("coverUrl"), cover);
+    out.insert(QString::fromLatin1("title"), episode.value(QString::fromLatin1("title")).toString());
+    out.insert(QString::fromLatin1("showName"), podcast.value(QString::fromLatin1("title")).toString());
+
+    const int durationSec = episode.value(QString::fromLatin1("duration")).toInt();
+    out.insert(QString::fromLatin1("durationText"),
+               QString::fromLatin1("%1 min").arg((durationSec + 30) / 60));
+    out.insert(QString::fromLatin1("whenText"),
+               relativeTime(episode.value(QString::fromLatin1("pubDate")).toString()));
+
+    const int comments = episode.value(QString::fromLatin1("commentCount")).toInt();
+    out.insert(QString::fromLatin1("commentCount"),
+               comments > 99 ? QString::fromLatin1("99+") : QString::number(comments));
     return out;
 }
