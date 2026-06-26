@@ -202,8 +202,13 @@ void XyzApiClient::sendRequest(RequestType type, bool isPost, const QString &pat
     }
 
     if (isPost) {
-        QJson::Serializer serializer;
-        const QByteArray payload = serializer.serialize(body);
+        // An empty body map posts a genuinely empty payload (the refresh endpoint
+        // expects no body); non-empty maps serialize as before.
+        QByteArray payload;
+        if (!body.isEmpty()) {
+            QJson::Serializer serializer;
+            payload = serializer.serialize(body);
+        }
         m_reply = m_nam->post(request, payload);
     } else {
         m_reply = m_nam->get(request);
