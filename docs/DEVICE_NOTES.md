@@ -3,6 +3,28 @@ Symbian Belle Device Notes
 
 Hardware: Nokia C7 (Belle FP2)
 
+## 2026-06-26 — Discovery empty on device ("Nothing to discover yet") — response nesting fix
+
+**Symptom (real device):** Discovery rendered the empty state. Diagnosis: a 2xx came back
+(so `discoveryLoaded` fired and `loadedOnce` latched) but `shapeDiscoverySections` parsed
+**zero** sections. Reproduced in-sim with a temporary section-count log: `sections=0
+buckets=0/0/0 anyOk=1`.
+
+**Root cause:** the real upstream `/v1/discovery-feed/list` returns feed entries directly
+under the **top-level `data`** key (`{"data":[ {type:DISCOVERY_COLLECTION, data:[modules]}, … ],
+"loadMoreKey":…}`) — single-nested, exactly like inbox/subscription. Our `shapeDiscoverySections`
+read **`data.data[]`** (double-nested), which I'd copied from the ultrazg/xyz proxy **doc**. That
+doc double-wraps because the proxy's `utils/response.go` `ReturnJson` nests the *entire* upstream
+body under another `data` (`{code,msg,data:<upstreamBody>}`) — a **proxy artifact**, not the real
+shape. So `top.data` was a list, `.toMap()` was empty, and nothing parsed. The Task-2 mock encoded
+the *same* proxy shape, so the sim passed while the device failed.
+
+**Fix (commit 8b814cd):** read entries from top-level `data[]`, with a `data.data[]` fallback for
+robustness; corrected the mock to the real single-nested shape. Re-verified in-sim: `sections=4
+buckets=2/1/1`. **General rule for this proxy: a doc that shows `data.X` means the real upstream
+returns `X` at top level — strip one `data` when porting, and build mocks to the real upstream
+shape.** Still pending: a real-device re-test to confirm the fix end-to-end.
+
 ## 2026-06-25 — Discovery page (multi-section discovery-feed), simulator data-path verified
 
 Added the Discovery tab (compass / index 0, previously inert). `xyzApi.fetchDiscovery()`
