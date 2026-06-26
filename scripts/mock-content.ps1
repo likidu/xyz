@@ -81,7 +81,9 @@ $discPage0 = Disc-Page @(
 $discPage1 = Disc-Page @(
   @{ type="TOP_LIST"; data=@(
        @{ title="最热榜"; targetType="EPISODE"; items=@(
-            @{ item=(New-Ep "d4" "The science of flavor in a pour-over" "Useless Beauty" 1980 "2026-06-17T09:00:00.000Z" 402) }) }) }
+            @{ item=(New-Ep "d4" "The science of flavor in a pour-over" "Useless Beauty" 1980 "2026-06-17T09:00:00.000Z" 402) }) },
+       @{ title="新星榜"; targetType="EPISODE"; items=@(
+            @{ item=(New-Ep "d7" "A debut worth hearing" "New Voices" 1500 "2026-06-16T09:00:00.000Z" 88) }) }) }
 ) "discoveryTopic"
 
 # page 2 (discoveryTopic): DISCOVERY_COLLECTION with a PODCAST module (skipped) + an EPISODE module, next -> pick

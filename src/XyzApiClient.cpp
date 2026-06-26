@@ -693,12 +693,19 @@ QVariantList XyzApiClient::shapeDiscoverySections(const QVariant &root) const
                                  QString(), m.value(QString::fromLatin1("picks")).toList(),
                                  QString::fromLatin1("episode"));
         } else if (type == QString::fromLatin1("TOP_LIST")) {
+            // Hidden per user preference: the new-star board "新星榜" (UTF-8 escaped).
+            static const QString kHiddenBoard =
+                QString::fromUtf8("\xE6\x96\xB0\xE6\x98\x9F\xE6\xA6\x9C");
             const QVariantList boards = data.toList();
             for (int b = 0; b < boards.size(); ++b) {
                 const QVariantMap board = boards.at(b).toMap();
+                const QString boardTitle = board.value(QString::fromLatin1("title")).toString();
+                if (boardTitle == kHiddenBoard) {
+                    continue;
+                }
                 if (board.value(QString::fromLatin1("targetType")).toString() == kEpisode) {
-                    appendEpisodeSection(sections, board.value(QString::fromLatin1("title")).toString(),
-                                         QString(), board.value(QString::fromLatin1("items")).toList(),
+                    appendEpisodeSection(sections, boardTitle, QString(),
+                                         board.value(QString::fromLatin1("items")).toList(),
                                          QString::fromLatin1("item"));
                 }
             }
