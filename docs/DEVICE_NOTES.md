@@ -3,6 +3,37 @@ Symbian Belle Device Notes
 
 Hardware: Nokia C7 (Belle FP2)
 
+## 2026-06-26 — Discovery: real feed is a loadMoreKey walk with several entry types
+
+**Symptom (device, after the nesting fix below):** only one section (an editor-pick
+collection) rendered. Pulled the **live** `/v1/discovery-feed/list` using the simulator's
+stored token (logged in on the sim, read `auth.accessToken` from
+`%LOCALAPPDATA%\Nokia\QtSimulator\data\xyz.db`, replayed the call from PowerShell with the
+iOS-spoof headers). The live feed is **nothing like the proxy doc**:
+
+1. **It's a `loadMoreKey` pagination walk, not 3 fixed selector keys.** Real cursors:
+   page0 → `topList` → `discoveryTopic` → `pick` → end (empty key). Our hardcoded
+   `mediumDiscoveryPictorial` is **stale and returns HTTP 400**, so Hottest never loaded.
+   `discoveryTopic` still happened to be a valid cursor, which is why one section showed.
+2. **Sections arrive as several entry types**, each `{type, data}`, only one of which we
+   parsed:
+   - `DISCOVERY_EPISODE_RECOMMEND` — `data{title:"为你推荐", targetType, target[].episode}`
+   - `EDITOR_PICK` — `data{picks[].episode}` (no title → hardcode 编辑精选)
+   - `TOP_LIST` — `data[]{title, items[].item}` (boards 最热榜 / 锋芒榜 / 新星榜)
+   - `DISCOVERY_COLLECTION` — `data[]{title, targetType, target[].episode}` (the only one
+     we had handled); also carries PODCAST modules we skip.
+   - skipped: `DISCOVERY_HEADER`, `DISCOVERY_PICTORIAL`, `CATEGORY_ENTRANCE`, `NEW_POWER`,
+     `DISCOVERY_PICK`, `ONBOARDING_PROMPT`, `DISCOVERY_BANNER`, `PILOT`.
+
+**Fix (commit cbd7b3b):** `fetchDiscovery` now walks the feed following `loadMoreKey`
+(capped at 6 pages), accumulating EPISODE sections; `shapeDiscoverySections` handles all
+four entry types via a shared `appendEpisodeSection` helper (note the differing episode
+key: `episode` for target/picks, `item` for top-list rows). The mock was rewritten to the
+real 4-page walk so it can't mask this again. **Verified against the LIVE API in the
+simulator: pages=4, sections=6** (为你推荐 / 编辑精选 / 最热榜 / 锋芒榜 / 新星榜 / a topic
+collection). Lesson: don't trust the proxy doc for discovery shapes — replay the live call
+with a sim token. Still pending: device re-test to confirm the visual render.
+
 ## 2026-06-26 — Discovery empty on device ("Nothing to discover yet") — response nesting fix
 
 **Symptom (real device):** Discovery rendered the empty state. Diagnosis: a 2xx came back
