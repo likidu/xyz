@@ -47,6 +47,7 @@ XyzApiClient::XyzApiClient(StorageManager *storage, QObject *parent)
     , m_requestType(NoneRequest)
     , m_commentsTotal(0)
     , m_discPhase(0)
+    , m_discAnyOk(false)
 {
     m_timeout.setSingleShot(true);
     connect(&m_timeout, SIGNAL(timeout()), this, SLOT(onTimeout()));
@@ -136,6 +137,7 @@ void XyzApiClient::fetchDiscovery()
     m_discBuckets[1].clear();
     m_discBuckets[2].clear();
     m_discPhase = 0;
+    m_discAnyOk = false;
     startDiscoveryPhase(0);
 }
 
@@ -155,10 +157,13 @@ void XyzApiClient::startDiscoveryPhase(int phase)
 }
 
 // Store this phase's sections, then either fire the next phase or finalize + emit.
-void XyzApiClient::finishDiscoveryPhase(const QVariantList &sections)
+void XyzApiClient::finishDiscoveryPhase(const QVariantList &sections, bool ok)
 {
     if (m_discPhase >= 0 && m_discPhase < 3) {
         m_discBuckets[m_discPhase] = sections;
+    }
+    if (ok) {
+        m_discAnyOk = true;
     }
     if (m_discPhase < 2) {
         ++m_discPhase;
@@ -169,11 +174,17 @@ void XyzApiClient::finishDiscoveryPhase(const QVariantList &sections)
     all += m_discBuckets[0];
     all += m_discBuckets[1];
     all += m_discBuckets[2];
-    m_discoverySections = all;
     setBusy(false);
-    if (all.isEmpty() && m_errorMessage.isEmpty()) {
-        setErrorMessage(QString::fromLatin1("No discovery content."));
+    if (!m_discAnyOk) {
+        // Every phase failed at the HTTP/parse level. Surface an error and do NOT
+        // emit discoveryLoaded, so the page's loadedOnce stays false and a transient
+        // failure retries on the next activation (mirrors fetchInbox on error).
+        if (m_errorMessage.isEmpty()) {
+            setErrorMessage(QString::fromLatin1("Couldn't load discovery."));
+        }
+        return;
     }
+    m_discoverySections = all;
     emit discoveryLoaded();
 }
 
@@ -221,6 +232,13 @@ void XyzApiClient::applyContentHeaders(QNetworkRequest &request)
         ? m_storage->value(QLatin1String("auth.accessToken"))
         : QString();
     request.setRawHeader("x-jike-access-token", token.toUtf8());
+
+    // The discovery feed requires the abtest opt-in header (per ultrazg/xyz
+    // handlers/discovery.go); other content endpoints work without it.
+    if (m_requestType == DiscoveryDefault || m_requestType == DiscoveryTopic
+        || m_requestType == DiscoveryHot) {
+        request.setRawHeader("abtest-info", "{\"old_user_discovery_feed\":\"enable\"}");
+    }
 }
 
 void XyzApiClient::startPost(RequestType type, const QString &path, const QVariantMap &body)
@@ -314,7 +332,7 @@ void XyzApiClient::onReplyFinished()
     }
 
     if (statusCode < 200 || statusCode >= 300) {
-        if (isDiscovery) { finishDiscoveryPhase(QVariantList()); return; }
+        if (isDiscovery) { finishDiscoveryPhase(QVariantList(), false); return; }
         QString detail;
         QJson::Parser parser;
         bool ok = false;
@@ -346,7 +364,7 @@ void XyzApiClient::onReplyFinished()
     bool ok = false;
     const QVariant root = parser.parse(payload, &ok);
     if (!ok) {
-        if (isDiscovery) { finishDiscoveryPhase(QVariantList()); return; }
+        if (isDiscovery) { finishDiscoveryPhase(QVariantList(), false); return; }
         setErrorMessage(QString::fromLatin1("Failed to parse response."));
         setBusy(false);
         return;
@@ -414,7 +432,7 @@ void XyzApiClient::onReplyFinished()
     }
 
     if (isDiscovery) {
-        finishDiscoveryPhase(shapeDiscoverySections(root));
+        finishDiscoveryPhase(shapeDiscoverySections(root), true);
         return;
     }
 

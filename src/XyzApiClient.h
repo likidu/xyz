@@ -80,7 +80,7 @@ private:
     QVariantMap shapeEpisode(const QVariantMap &item) const;
     QVariantMap shapeComment(const QVariantMap &item) const;
     void startDiscoveryPhase(int phase);
-    void finishDiscoveryPhase(const QVariantList &sections);
+    void finishDiscoveryPhase(const QVariantList &sections, bool ok);
     QVariantList shapeDiscoverySections(const QVariant &root) const;
     QVariantMap shapeDiscoveryEpisode(const QVariantMap &episode) const;
     QString pickImageUrl(const QVariantMap &image) const;
@@ -105,6 +105,7 @@ private:
     QVariantList m_discoverySections;
     QVariantList m_discBuckets[3];
     int m_discPhase;
+    bool m_discAnyOk;
 };
 
 #endif // XYZAPICLIENT_H
