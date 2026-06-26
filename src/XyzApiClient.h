@@ -65,6 +65,9 @@ private:
 
     void startPost(RequestType type, const QString &path, const QVariantMap &body);
     void startGet(RequestType type, const QString &path);
+    // Shared issue-path for startPost/startGet/startRefresh/resendReplay.
+    void sendRequest(RequestType type, bool isPost, const QString &path,
+                     const QVariantMap &body, bool withRefreshHeader = false);
     void abortActiveRequest();
     void applyContentHeaders(QNetworkRequest &request);
     void setBusy(bool busy);

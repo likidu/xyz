@@ -171,7 +171,8 @@ void XyzApiClient::applyContentHeaders(QNetworkRequest &request)
     request.setRawHeader("x-jike-access-token", token.toUtf8());
 }
 
-void XyzApiClient::startPost(RequestType type, const QString &path, const QVariantMap &body)
+void XyzApiClient::sendRequest(RequestType type, bool isPost, const QString &path,
+                               const QVariantMap &body, bool withRefreshHeader)
 {
     abortActiveRequest();
     setErrorMessage(QString());
@@ -189,39 +190,35 @@ void XyzApiClient::startPost(RequestType type, const QString &path, const QVaria
     QNetworkRequest request(url);
     applyContentHeaders(request);
 
-    QJson::Serializer serializer;
-    const QByteArray payload = serializer.serialize(body);
+    // The refresh endpoint authenticates with BOTH tokens in headers.
+    if (withRefreshHeader) {
+        const QString refresh = m_storage
+            ? m_storage->value(QLatin1String("auth.refreshToken"))
+            : QString();
+        request.setRawHeader("x-jike-refresh-token", refresh.toUtf8());
+    }
 
-    m_reply = m_nam->post(request, payload);
+    if (isPost) {
+        QJson::Serializer serializer;
+        const QByteArray payload = serializer.serialize(body);
+        m_reply = m_nam->post(request, payload);
+    } else {
+        m_reply = m_nam->get(request);
+    }
     connect(m_reply, SIGNAL(finished()), this, SLOT(onReplyFinished()));
     connect(m_reply, SIGNAL(sslErrors(const QList<QSslError> &)),
             this, SLOT(onSslErrors(const QList<QSslError> &)));
     m_timeout.start(15000);
 }
 
+void XyzApiClient::startPost(RequestType type, const QString &path, const QVariantMap &body)
+{
+    sendRequest(type, true, path, body);
+}
+
 void XyzApiClient::startGet(RequestType type, const QString &path)
 {
-    abortActiveRequest();
-    setErrorMessage(QString());
-    setBusy(true);
-    m_requestType = type;
-
-    if (!QSslSocket::supportsSsl()) {
-        setErrorMessage(QString::fromLatin1("SSL not supported at runtime."));
-        setBusy(false);
-        m_requestType = NoneRequest;
-        return;
-    }
-
-    const QUrl url(QString::fromLatin1(contentBase()) + path);
-    QNetworkRequest request(url);
-    applyContentHeaders(request);
-
-    m_reply = m_nam->get(request);
-    connect(m_reply, SIGNAL(finished()), this, SLOT(onReplyFinished()));
-    connect(m_reply, SIGNAL(sslErrors(const QList<QSslError> &)),
-            this, SLOT(onSslErrors(const QList<QSslError> &)));
-    m_timeout.start(15000);
+    sendRequest(type, false, path, QVariantMap());
 }
 
 void XyzApiClient::abortActiveRequest()
