@@ -68,9 +68,43 @@ function New-SilenceWav {
 }
 $wav = New-SilenceWav
 
+# Refresh-flow test state: content endpoints answer 401 until the app has
+# refreshed once via /app_auth_tokens.refresh, mimicking an expired access token.
+$script:tokenRefreshed = $false
+
 while ($listener.IsListening) {
   $ctx = $listener.GetContext()
   $path = $ctx.Request.Url.AbsolutePath
+  $method = $ctx.Request.HttpMethod
+
+  # Token refresh: return new tokens in the BODY (matches the real upstream, which
+  # the ultrazg/xyz proxy reads from the response body), and flip the gate open.
+  if ($path -like "*app_auth_tokens.refresh*") {
+    $refresh = @{ "x-jike-access-token"="NEW-ACCESS-TOKEN";
+                  "x-jike-refresh-token"="NEW-REFRESH-TOKEN"; success=$true } | ConvertTo-Json
+    $script:tokenRefreshed = $true
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($refresh)
+    $ctx.Response.ContentType = "application/json; charset=utf-8"
+    $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
+    $ctx.Response.Close()
+    Write-Host "$method $path -> 200 (refresh)"
+    continue
+  }
+
+  # Simulate an expired access token: every content endpoint 401s until refreshed.
+  $isContent = ($path -like "*inbox*") -or ($path -like "*subscription*") -or
+               ($path -like "*episode*") -or ($path -like "*comment*")
+  if ($isContent -and -not $script:tokenRefreshed) {
+    $ctx.Response.StatusCode = 401
+    $err = @{ code=401; msg="UNAUTHORIZED" } | ConvertTo-Json
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($err)
+    $ctx.Response.ContentType = "application/json; charset=utf-8"
+    $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
+    $ctx.Response.Close()
+    Write-Host "$method $path -> 401 (gated)"
+    continue
+  }
+
   if ($path -like "*/audio/*") {
     $ctx.Response.ContentType = "audio/wav"
     $ctx.Response.OutputStream.Write($wav, 0, $wav.Length)
@@ -85,4 +119,5 @@ while ($listener.IsListening) {
   $ctx.Response.ContentType = "application/json; charset=utf-8"
   $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
   $ctx.Response.Close()
+  Write-Host "$method $path -> 200"
 }
