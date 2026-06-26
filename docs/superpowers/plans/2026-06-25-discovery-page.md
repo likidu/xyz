@@ -660,11 +660,9 @@ Page {
                                 }
                             }
 
-                            // whole-card tap target (single full-delegate MouseArea, behind content)
-                            MouseArea {
-                                anchors.fill: card
-                                onClicked: page.episodeRequested(modelData)
-                            }
+                            // press feedback (non-interactive wash) + single whole-card
+                            // tap target on top. Card content (Text/Image) never grabs the
+                            // mouse, so one MouseArea catches a tap anywhere on the card.
                             Rectangle {
                                 anchors.fill: card
                                 radius: 8
@@ -730,8 +728,6 @@ Page {
     }
 }
 ```
-
-> Note: two stacked `MouseArea`s (the press-wash sits between them) both forward to `episodeRequested`; the lower one guarantees the tap is caught behind the wash, matching the Updates row pattern. If review prefers one, keep `cardTap` and drop the first — both are harmless.
 
 - [ ] **Step 2: Register the page in `qml/qml.qrc`**
 
