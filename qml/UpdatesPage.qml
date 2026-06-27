@@ -81,7 +81,7 @@ Page {
                 anchors.centerIn: parent
                 spacing: 7
                 Image {
-                    source: "gfx/tab-headphones.svg"
+                    source: "gfx/icon-stack.svg"
                     width: 16
                     height: 16
                     smooth: true

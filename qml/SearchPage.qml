@@ -30,6 +30,11 @@ Page {
         if (status === PageStatus.Active) {
             searchInput.forceActiveFocus();
             searchInput.openSoftwareInputPanel();
+        } else if (status === PageStatus.Deactivating) {
+            // Release the software input panel so the page beneath isn't left
+            // with a shrunken viewport after we leave search.
+            searchInput.closeSoftwareInputPanel();
+            searchInput.focus = false;
         }
     }
 
@@ -72,7 +77,7 @@ Page {
             MouseArea {
                 id: backMouse
                 anchors.fill: parent
-                onClicked: page.backRequested()
+                onClicked: { searchInput.closeSoftwareInputPanel(); page.backRequested(); }
             }
         }
 
