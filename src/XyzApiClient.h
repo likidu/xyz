@@ -22,6 +22,7 @@ class XyzApiClient : public QObject
     Q_PROPERTY(QVariantList inboxItems READ inboxItems NOTIFY inboxLoaded)
     Q_PROPERTY(QVariantList subscriptions READ subscriptions NOTIFY subscriptionsLoaded)
     Q_PROPERTY(QVariantMap episode READ episode NOTIFY episodeLoaded)
+    Q_PROPERTY(QVariantMap podcast READ podcast NOTIFY podcastLoaded)
     Q_PROPERTY(QVariantList comments READ comments NOTIFY commentsLoaded)
     Q_PROPERTY(int commentsTotal READ commentsTotal NOTIFY commentsLoaded)
     Q_PROPERTY(bool hasMoreComments READ hasMoreComments NOTIFY commentsLoaded)
@@ -35,6 +36,7 @@ public:
     QVariantList inboxItems() const;
     QVariantList subscriptions() const;
     QVariantMap episode() const;
+    QVariantMap podcast() const;
     QVariantList comments() const;
     int commentsTotal() const;
     bool hasMoreComments() const;
@@ -43,6 +45,7 @@ public:
     Q_INVOKABLE void fetchInbox();
     Q_INVOKABLE void fetchSubscriptions();
     Q_INVOKABLE void fetchEpisode(const QString &eid);
+    Q_INVOKABLE void fetchPodcast(const QString &pid);
     Q_INVOKABLE void fetchComments(const QString &eid);
     // Append the next page using the loadMoreKey returned by the last comments fetch.
     Q_INVOKABLE void loadMoreComments();
@@ -54,6 +57,7 @@ signals:
     void inboxLoaded();
     void subscriptionsLoaded();
     void episodeLoaded();
+    void podcastLoaded();
     void commentsLoaded();
     void discoveryLoaded();
     void sessionExpired();
@@ -66,7 +70,7 @@ private slots:
 private:
     enum RequestType { NoneRequest, InboxRequest, SubscriptionsRequest,
                        EpisodeRequest, CommentsRequest, MoreCommentsRequest,
-                       DiscoveryRequest, RefreshRequest };
+                       DiscoveryRequest, RefreshRequest, PodcastRequest };
 
     void startPost(RequestType type, const QString &path, const QVariantMap &body);
     void startGet(RequestType type, const QString &path);
@@ -87,6 +91,7 @@ private:
     QVariantMap shapeInboxItem(const QVariantMap &item) const;
     QVariantMap shapeSubscription(const QVariantMap &item) const;
     QVariantMap shapeEpisode(const QVariantMap &item) const;
+    QVariantMap shapePodcast(const QVariantMap &item) const;
     QVariantMap shapeComment(const QVariantMap &item) const;
     void startDiscoveryPage(const QString &loadMoreKey);
     void finishDiscoveryPage(const QVariantList &sections, const QString &nextKey, bool ok);
@@ -118,6 +123,7 @@ private:
     QVariantList m_inboxItems;
     QVariantList m_subscriptions;
     QVariantMap m_episode;
+    QVariantMap m_podcast;
     QVariantList m_comments;
     // Comment pagination: eid of the current thread, the opaque loadMoreKey to
     // echo back for the next page (empty when there are no more), and the total.

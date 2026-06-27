@@ -61,6 +61,7 @@ QString XyzApiClient::errorMessage() const { return m_errorMessage; }
 QVariantList XyzApiClient::inboxItems() const { return m_inboxItems; }
 QVariantList XyzApiClient::subscriptions() const { return m_subscriptions; }
 QVariantMap XyzApiClient::episode() const { return m_episode; }
+QVariantMap XyzApiClient::podcast() const { return m_podcast; }
 QVariantList XyzApiClient::comments() const { return m_comments; }
 int XyzApiClient::commentsTotal() const { return m_commentsTotal; }
 bool XyzApiClient::hasMoreComments() const { return !m_commentsLoadMoreKey.isEmpty(); }
@@ -91,6 +92,17 @@ void XyzApiClient::fetchEpisode(const QString &eid)
     }
     startGet(EpisodeRequest,
              QString::fromLatin1("/v1/episode/get?eid=") + QString(QUrl::toPercentEncoding(eid)));
+}
+
+// Podcast (show) detail is a GET with the pid as a query param (no body) —
+// /v1/podcast/get?pid=, confirmed from the ultrazg/xyz Go source (handlers/podcast.go).
+void XyzApiClient::fetchPodcast(const QString &pid)
+{
+    if (pid.isEmpty()) {
+        return;
+    }
+    startGet(PodcastRequest,
+             QString::fromLatin1("/v1/podcast/get?pid=") + QString(QUrl::toPercentEncoding(pid)));
 }
 
 // Top comments (first page). The official body wraps the eid in an owner object —
@@ -465,6 +477,17 @@ void XyzApiClient::onReplyFinished()
         return;
     }
 
+    if (type == PodcastRequest) {
+        QVariantMap raw = top.value(QString::fromLatin1("data")).toMap();
+        if (raw.isEmpty()) {
+            raw = top;
+        }
+        m_podcast = shapePodcast(raw);
+        setBusy(false);
+        emit podcastLoaded();
+        return;
+    }
+
     if (type == CommentsRequest || type == MoreCommentsRequest) {
         QVariantList shaped;
         for (int i = 0; i < rawItems.size(); ++i) {
@@ -670,6 +693,54 @@ QVariantMap XyzApiClient::shapeSubscription(const QVariantMap &item) const
                relativeTime(item.value(QString::fromLatin1("latestEpisodePubDate")).toString()));
     out.insert(QString::fromLatin1("often"),
                item.value(QString::fromLatin1("subscriptionOftenPlayed")).toBool());
+    out.insert(QString::fromLatin1("pid"), item.value(QString::fromLatin1("pid")).toString());
+    return out;
+}
+
+// "68035" -> "68,035" for the subscriber count.
+static QString formatCount(qlonglong n)
+{
+    QString s = QString::number(n);
+    int i = s.length() - 3;
+    while (i > 0) {
+        s.insert(i, QLatin1Char(','));
+        i -= 3;
+    }
+    return s;
+}
+
+QVariantMap XyzApiClient::shapePodcast(const QVariantMap &item) const
+{
+    QVariantMap out;
+    out.insert(QString::fromLatin1("pid"), item.value(QString::fromLatin1("pid")).toString());
+    out.insert(QString::fromLatin1("name"), item.value(QString::fromLatin1("title")).toString());
+    out.insert(QString::fromLatin1("desc"), item.value(QString::fromLatin1("description")).toString());
+    out.insert(QString::fromLatin1("coverUrl"),
+               pickImageUrl(item.value(QString::fromLatin1("image")).toMap()));
+
+    // Author = the first podcaster (fall back to the legacy "author" string).
+    const QVariantList podcasters = item.value(QString::fromLatin1("podcasters")).toList();
+    QString author;
+    QString authorAvatar;
+    if (!podcasters.isEmpty()) {
+        const QVariantMap p = podcasters.at(0).toMap();
+        author = p.value(QString::fromLatin1("nickname")).toString();
+        authorAvatar = pickImageUrl(p.value(QString::fromLatin1("avatar")).toMap()
+                                     .value(QString::fromLatin1("picture")).toMap());
+    }
+    if (author.isEmpty()) {
+        author = item.value(QString::fromLatin1("author")).toString();
+    }
+    out.insert(QString::fromLatin1("author"), author);
+    out.insert(QString::fromLatin1("authorAvatarUrl"), authorAvatar);
+
+    out.insert(QString::fromLatin1("subscriberText"),
+               formatCount(item.value(QString::fromLatin1("subscriptionCount")).toLongLong()));
+    out.insert(QString::fromLatin1("episodeCountText"),
+               QString::number(item.value(QString::fromLatin1("episodeCount")).toInt()));
+    out.insert(QString::fromLatin1("isSubscribed"),
+               item.value(QString::fromLatin1("subscriptionStatus")).toString()
+                   == QLatin1String("ON"));
     return out;
 }
 
@@ -707,6 +778,12 @@ QVariantMap XyzApiClient::shapeEpisode(const QVariantMap &item) const
     out.insert(QString::fromLatin1("audioUrl"), audioUrl);
     out.insert(QString::fromLatin1("audioSizeText"),
                formatBytesShort(media.value(QString::fromLatin1("size")).toLongLong()));
+
+    QString pid = item.value(QString::fromLatin1("pid")).toString();
+    if (pid.isEmpty()) {
+        pid = podcast.value(QString::fromLatin1("pid")).toString();
+    }
+    out.insert(QString::fromLatin1("pid"), pid);
 
     return out;
 }
