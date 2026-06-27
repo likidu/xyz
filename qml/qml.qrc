@@ -13,6 +13,7 @@
         <file>DiscoveryPage.qml</file>
         <file>SubscriptionsPage.qml</file>
         <file>EpisodePage.qml</file>
+        <file>PodcastPage.qml</file>
         <file>DownloadsPage.qml</file>
         <file>NowPlayingPage.qml</file>
         <file>MiniPlayer.qml</file>
@@ -29,7 +30,9 @@
         <file>gfx/icon-play.svg</file>
         <file>gfx/icon-play-white.svg</file>
         <file>gfx/icon-queue.svg</file>
+        <file>gfx/icon-bell.svg</file>
         <file>gfx/icon-comment.svg</file>
+        <file>gfx/icon-headphone.svg</file>
         <file>gfx/icon-heart.svg</file>
         <file>gfx/icon-dots.svg</file>
         <file>gfx/icon-list.svg</file>
