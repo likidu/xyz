@@ -184,6 +184,12 @@ Page {
                         sourceSize.height: 104
                         source: page.coverUrl
                     }
+                    // Tap the cover to open the show — same target as the show name.
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: page.showPid !== ""
+                        onClicked: page.podcastRequested(page.showPid)
+                    }
                 }
 
                 Column {
