@@ -167,6 +167,9 @@ Page {
         contentWidth: width
         contentHeight: contentCol.height
         flickableDirection: Flickable.VerticalFlick
+        // No elastic overshoot — the bounce-back animates extra repaint frames at
+        // the list ends, which is wasted work on the weak Belle CPU.
+        boundsBehavior: Flickable.StopAtBounds
 
         Column {
             id: contentCol
@@ -506,6 +509,7 @@ Page {
                                 anchors.fill: parent
                                 fillMode: Image.PreserveAspectCrop
                                 smooth: true
+                                asynchronous: true   // decode off the UI thread so a late avatar can't stall a flick
                                 sourceSize.width: 36
                                 sourceSize.height: 36
                                 source: model.avatarUrl
