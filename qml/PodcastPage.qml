@@ -478,6 +478,30 @@ Page {
                 }
             }
 
+            // episode-list loading / error (podcast detail is in, the list isn't yet)
+            Item {
+                width: contentCol.width
+                visible: page.detailLoaded && !page.episodesLoaded
+                height: visible ? 80 : 0
+
+                BusyIndicator {
+                    running: xyzApi.busy
+                    visible: running
+                    width: 32; height: 32
+                    anchors.centerIn: parent
+                }
+                Text {
+                    visible: !xyzApi.busy && xyzApi.errorMessage.length > 0
+                    anchors.centerIn: parent
+                    width: contentCol.width - 48
+                    text: xyzApi.errorMessage
+                    color: Theme.errorColor
+                    font.pixelSize: 13
+                    wrapMode: Text.WordWrap
+                    horizontalAlignment: Text.AlignHCenter
+                }
+            }
+
             // tail spacer
             Item { width: contentCol.width; height: 16 }
         }

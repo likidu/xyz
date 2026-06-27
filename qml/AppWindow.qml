@@ -51,6 +51,34 @@ XyzPageStackWindow {
         }
     }
 
+    // Open the podcast page for a show. If it's already in the stack (the
+    // Podcast<->Episode cycle), re-seed for the new show and unwind back to it
+    // rather than pushing a duplicate (a re-push corrupts the Symbian PageStack).
+    function openPodcast(pid, seed) {
+        if (pageStack.busy || pid === "") return;
+        var inStack = pageStack.find(function(p) { return p === podcastPage; });
+        if (inStack) {
+            if (podcastPage.pid !== pid) podcastPage.openWith(pid, seed);
+            pageStack.pop(podcastPage);
+        } else {
+            podcastPage.openWith(pid, seed);
+            pageStack.push(podcastPage);
+        }
+    }
+
+    // Open the episode page for a tapped item, with the same already-in-stack guard.
+    function openEpisodeItem(item) {
+        if (pageStack.busy) return;
+        var inStack = pageStack.find(function(p) { return p === episodePage; });
+        if (inStack) {
+            if (episodePage.eid !== item.eid) episodePage.openWith(item);
+            pageStack.pop(episodePage);
+        } else {
+            episodePage.openWith(item);
+            pageStack.push(episodePage);
+        }
+    }
+
     function handleTab(index) {
         if (index === 0) {
             if (!pageStack.busy && pageStack.currentPage !== discoveryPage) {
@@ -172,27 +200,18 @@ XyzPageStackWindow {
         id: subscriptionsPage
         onTabSelected: window.handleTab(index)
         onOpenPlayerRequested: window.openNowPlaying()
-        onPodcastRequested: {
-            podcastPage.openWith(pid, seed);
-            pageStack.push(podcastPage);
-        }
+        onPodcastRequested: window.openPodcast(pid, seed)
     }
 
     EpisodePage {
         id: episodePage
         onOpenPlayerRequested: window.openNowPlaying()
-        onPodcastRequested: {
-            podcastPage.openWith(pid, {"name": episodePage.showTitle, "coverUrl": episodePage.coverUrl});
-            pageStack.push(podcastPage);
-        }
+        onPodcastRequested: window.openPodcast(pid, {"name": episodePage.showTitle, "coverUrl": episodePage.coverUrl})
     }
 
     PodcastPage {
         id: podcastPage
-        onEpisodeRequested: {
-            episodePage.openWith(item);
-            pageStack.push(episodePage);
-        }
+        onEpisodeRequested: window.openEpisodeItem(item)
         onOpenPlayerRequested: window.openNowPlaying()
     }
 

@@ -135,11 +135,10 @@ private:
     QVariantMap m_episode;
     QVariantMap m_podcast;
     QVariantList m_podcastEpisodes;
-    // Episode-list pagination: the pid of the current show, the opaque loadMoreKey
-    // to echo back for the next page (empty when there are no more), and the total.
+    // Episode-list pagination: the pid of the current show and the opaque loadMoreKey
+    // to echo back for the next page (empty when there are no more).
     QString m_podcastEpisodesPid;
     QVariantMap m_podcastEpisodesKey;
-    int m_podcastEpisodesTotal;
     QVariantList m_comments;
     // Comment pagination: eid of the current thread, the opaque loadMoreKey to
     // echo back for the next page (empty when there are no more), and the total.

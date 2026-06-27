@@ -48,7 +48,6 @@ XyzApiClient::XyzApiClient(StorageManager *storage, QObject *parent)
     , m_replayType(NoneRequest)
     , m_replayIsPost(false)
     , m_refreshAttempted(false)
-    , m_podcastEpisodesTotal(0)
     , m_commentsTotal(0)
     , m_discPageCount(0)
     , m_discAnyOk(false)
@@ -117,7 +116,6 @@ void XyzApiClient::fetchPodcastEpisodes(const QString &pid)
     }
     m_podcastEpisodesPid = pid;
     m_podcastEpisodesKey.clear();
-    m_podcastEpisodesTotal = 0;
 
     QVariantMap body;
     body.insert(QString::fromLatin1("pid"), pid);
@@ -531,9 +529,6 @@ void XyzApiClient::onReplyFinished()
             m_podcastEpisodes += shaped;   // append the next page
         } else {
             m_podcastEpisodes = shaped;    // first page replaces
-        }
-        if (top.contains(QString::fromLatin1("total"))) {
-            m_podcastEpisodesTotal = top.value(QString::fromLatin1("total")).toInt();
         }
         // loadMoreKey is absent on the last page → empty map → hasMore false.
         m_podcastEpisodesKey = top.value(QString::fromLatin1("loadMoreKey")).toMap();

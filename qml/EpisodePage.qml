@@ -196,24 +196,28 @@ Page {
                     anchors.rightMargin: 14
                     spacing: 6
 
-                    Row {
+                    Item {
                         width: parent.width
+                        height: showTitleText.height
                         visible: page.showTitle.length > 0
-                        spacing: 3
 
                         Text {
+                            id: showTitleText
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
                             text: page.showTitle
                             font.pixelSize: 14
                             color: Theme.accentBright
                             elide: Text.ElideRight
-                            width: page.showPid !== "" ? Math.min(implicitWidth, parent.width - 16) : parent.width
-                            anchors.verticalCenter: parent.verticalCenter
+                            width: page.showPid !== "" ? Math.min(implicitWidth, parent.width - 17) : parent.width
                         }
                         Image {
                             source: "gfx/icon-chevron.svg"
                             width: 14; height: 14; smooth: true
                             visible: page.showPid !== ""
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: showTitleText.right
+                            anchors.leftMargin: 3
+                            anchors.verticalCenter: showTitleText.verticalCenter
                         }
                         MouseArea {
                             anchors.fill: parent
