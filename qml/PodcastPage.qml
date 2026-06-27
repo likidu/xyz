@@ -95,6 +95,39 @@ Page {
         onBackClicked: pageStack.pop()
     }
 
+    // Subscribe control lives in the top bar (right), like the Updates "My
+    // subscriptions" pill. Display-only for now (toggle deferred).
+    Rectangle {
+        id: subBtn
+        visible: page.detailLoaded
+        height: 34
+        width: subRow.width + 24
+        radius: 8
+        anchors.right: header.right
+        anchors.rightMargin: 8
+        anchors.verticalCenter: header.verticalCenter
+        color: "#248b6dff"
+        border.width: 1
+        border.color: "#618b6dff"
+        Row {
+            id: subRow
+            anchors.centerIn: parent
+            spacing: 7
+            Image {
+                source: "gfx/icon-bell.svg"
+                width: 16; height: 16; smooth: true
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            Text {
+                text: page.isSubscribed ? qsTr("Subscribed") : qsTr("Subscribe")
+                font.pixelSize: 14
+                font.weight: Font.DemiBold
+                color: Theme.accentBright
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+    }
+
     Flickable {
         id: scroll
         anchors.top: header.bottom
@@ -202,10 +235,10 @@ Page {
                 }
             }
 
-            // ---- subscriber row + (display-only) subscribe ----
+            // ---- subscriber count ----
             Item {
                 width: contentCol.width
-                height: 64
+                height: 60
                 visible: page.detailLoaded
 
                 Row {
@@ -228,41 +261,6 @@ Page {
                     }
                 }
 
-                Row {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 14
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 9
-
-                    Rectangle {
-                        width: 46; height: 42; radius: 7
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: Theme.panel2
-                        border.width: 1; border.color: Theme.hairlineStrong
-                        Image {
-                            source: "gfx/icon-bell.svg"
-                            width: 20; height: 20; smooth: true
-                            anchors.centerIn: parent
-                        }
-                    }
-
-                    Rectangle {
-                        height: 42; radius: 7
-                        width: subLabel.width + 32
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: Theme.panel2
-                        border.width: 1; border.color: Theme.hairlineStrong
-                        Text {
-                            id: subLabel
-                            anchors.centerIn: parent
-                            text: page.isSubscribed ? qsTr("Subscribed") : qsTr("Subscribe")
-                            font.pixelSize: 15
-                            font.weight: Font.Bold
-                            color: Theme.textDim
-                        }
-                    }
-                }
-
                 Rectangle {
                     anchors.left: parent.left
                     anchors.right: parent.right
@@ -272,53 +270,19 @@ Page {
                 }
             }
 
-            // ---- episode count + filter chips ----
+            // ---- episode count ----
             Item {
                 width: contentCol.width
-                height: 52
+                height: 40
                 visible: page.detailLoaded
 
                 Text {
                     anchors.left: parent.left
                     anchors.leftMargin: 14
-                    anchors.top: parent.top
-                    anchors.topMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
                     text: page.episodeCountText + " " + qsTr("episodes")
                     font.pixelSize: 13
                     color: Theme.textDim
-                }
-
-                Row {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 14
-                    anchors.bottom: parent.bottom
-                    spacing: 8
-
-                    Rectangle {
-                        height: 28; radius: 14
-                        width: allChip.width + 32
-                        color: "#388b6dff"
-                        border.width: 1; border.color: Theme.accent
-                        Text {
-                            id: allChip
-                            anchors.centerIn: parent
-                            text: qsTr("All")
-                            font.pixelSize: 13
-                            color: "#ffffff"
-                        }
-                    }
-                    Rectangle {
-                        height: 28; radius: 14
-                        width: popChip.width + 32
-                        color: "#10FFFFFF"
-                        Text {
-                            id: popChip
-                            anchors.centerIn: parent
-                            text: qsTr("Popular")
-                            font.pixelSize: 13
-                            color: Theme.textDim
-                        }
-                    }
                 }
             }
 
