@@ -99,6 +99,17 @@ $discPage3 = Disc-Page @(
   @{ type="DISCOVERY_PICK"; data=@() }
 ) ""
 
+# /v1/search/create (type=EPISODE): mixed feed under "data". A search EPISODE entry
+# carries the episode fields at its own top level (New-Ep's shape) plus HEADER/FOOTER
+# wrappers the client skips. Mirrors the real search shape so the parser is exercised.
+$search = @{ code=200; msg="OK"; data=@(
+  @{ type="HEADER"; title="单集"; link="cosmos://page.cos/search?tab=episode" },
+  (New-Ep "s1" "Summit: The Weekly Orbit 6.6" "The Weekly Orbit" 7800 "2026-06-13T09:00:00.000Z" 312),
+  (New-Ep "s2" "Orbit deep-dive: rockets at dawn" "Cosmic Drift" 3600 "2026-06-20T09:00:00.000Z" 88),
+  (New-Ep "s3" "The quiet orbit of small things" "Useless Beauty" 2400 "2026-06-18T09:00:00.000Z" 45),
+  @{ type="FOOTER"; title="查看全部"; link="cosmos://page.cos/search?tab=episode" }
+) } | ConvertTo-Json -Depth 12
+
 # Minimal 0.4s mono 8kHz 8-bit PCM WAV (~3.2KB) so the download+play loop is testable.
 function New-SilenceWav {
   $sr=8000; $secs=0.4; $n=[int]($sr*$secs)
@@ -167,6 +178,7 @@ while ($listener.IsListening) {
             elseif ($raw -like "*pick*") { $discPage3 }
             else { $discPage0 }
           }
+          elseif ($path -like "*search*") { $search }
           elseif ($path -like "*subscription*") { $subs }
           elseif ($path -like "*episode*") { $episode }
           elseif ($path -like "*comment*") { $comments }

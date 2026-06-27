@@ -29,6 +29,7 @@ class XyzApiClient : public QObject
     Q_PROPERTY(int commentsTotal READ commentsTotal NOTIFY commentsLoaded)
     Q_PROPERTY(bool hasMoreComments READ hasMoreComments NOTIFY commentsLoaded)
     Q_PROPERTY(QVariantList discoverySections READ discoverySections NOTIFY discoveryLoaded)
+    Q_PROPERTY(QVariantList searchResults READ searchResults NOTIFY searchLoaded)
 
 public:
     explicit XyzApiClient(StorageManager *storage, QObject *parent = 0);
@@ -45,6 +46,7 @@ public:
     int commentsTotal() const;
     bool hasMoreComments() const;
     QVariantList discoverySections() const;
+    QVariantList searchResults() const;
 
     Q_INVOKABLE void fetchInbox();
     Q_INVOKABLE void fetchSubscriptions();
@@ -57,6 +59,8 @@ public:
     // Append the next page using the loadMoreKey returned by the last comments fetch.
     Q_INVOKABLE void loadMoreComments();
     Q_INVOKABLE void fetchDiscovery();
+    // Episode search (first page only, type=EPISODE). Empty keyword is a no-op.
+    Q_INVOKABLE void search(const QString &keyword);
 
 signals:
     void busyChanged();
@@ -68,6 +72,7 @@ signals:
     void podcastEpisodesLoaded();
     void commentsLoaded();
     void discoveryLoaded();
+    void searchLoaded();
     void sessionExpired();
 
 private slots:
@@ -78,7 +83,7 @@ private slots:
 private:
     enum RequestType { NoneRequest, InboxRequest, SubscriptionsRequest,
                        EpisodeRequest, CommentsRequest, MoreCommentsRequest,
-                       DiscoveryRequest, RefreshRequest, PodcastRequest,
+                       DiscoveryRequest, SearchRequest, RefreshRequest, PodcastRequest,
                        PodcastEpisodesRequest, MorePodcastEpisodesRequest };
 
     void startPost(RequestType type, const QString &path, const QVariantMap &body);
@@ -106,6 +111,8 @@ private:
     void startDiscoveryPage(const QString &loadMoreKey);
     void finishDiscoveryPage(const QVariantList &sections, const QString &nextKey, bool ok);
     QVariantList shapeDiscoverySections(const QVariant &root) const;
+    // Pull EPISODE entries out of a /v1/search/create response (mixed feed).
+    QVariantList shapeSearchEpisodes(const QVariant &root) const;
     // Build a {title, subtitle, items} section from a list of target wrappers, pulling the
     // episode out of each wrapper under episodeKey ("episode" for target/picks, "item" for
     // top-list rows). Appends only if at least one episode shaped.
@@ -148,6 +155,7 @@ private:
     QVariantList m_discoverySections;
     int m_discPageCount;   // pages walked this fetch (loadMoreKey pagination, capped)
     bool m_discAnyOk;
+    QVariantList m_searchResults;
 };
 
 #endif // XYZAPICLIENT_H

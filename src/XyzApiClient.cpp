@@ -68,6 +68,7 @@ QVariantList XyzApiClient::comments() const { return m_comments; }
 int XyzApiClient::commentsTotal() const { return m_commentsTotal; }
 bool XyzApiClient::hasMoreComments() const { return !m_commentsLoadMoreKey.isEmpty(); }
 QVariantList XyzApiClient::discoverySections() const { return m_discoverySections; }
+QVariantList XyzApiClient::searchResults() const { return m_searchResults; }
 
 void XyzApiClient::fetchInbox()
 {
@@ -197,6 +198,25 @@ void XyzApiClient::startDiscoveryPage(const QString &loadMoreKey)
     startPost(DiscoveryRequest, QString::fromLatin1("/v1/discovery-feed/list"), body);
 }
 
+// Episode search (first page only). Body mirrors the ultrazg/xyz proxy's Search
+// handler (handlers/search.go): type=EPISODE plus the limit/sourcePageName/
+// currentPageName the upstream /v1/search/create expects. loadMoreKey is omitted
+// (no pagination); a previous search's results stay until this one replaces them.
+void XyzApiClient::search(const QString &keyword)
+{
+    const QString kw = keyword.trimmed();
+    if (kw.isEmpty()) {
+        return;
+    }
+    QVariantMap body;
+    body.insert(QString::fromLatin1("keyword"), kw);
+    body.insert(QString::fromLatin1("type"), QString::fromLatin1("EPISODE"));
+    body.insert(QString::fromLatin1("limit"), QString::fromLatin1("20"));
+    body.insert(QString::fromLatin1("sourcePageName"), QString::fromLatin1("4"));
+    body.insert(QString::fromLatin1("currentPageName"), QString::fromLatin1("4"));
+    startPost(SearchRequest, QString::fromLatin1("/v1/search/create"), body);
+}
+
 // Accumulate this page's sections, then either fetch the next page (if the response
 // gave a loadMoreKey and we're under the cap) or finalize + emit.
 void XyzApiClient::finishDiscoveryPage(const QVariantList &sections, const QString &nextKey, bool ok)
@@ -268,9 +288,10 @@ void XyzApiClient::applyContentHeaders(QNetworkRequest &request)
         : QString();
     request.setRawHeader("x-jike-access-token", token.toUtf8());
 
-    // The discovery feed requires the abtest opt-in header (per ultrazg/xyz
-    // handlers/discovery.go); other content endpoints work without it.
-    if (m_requestType == DiscoveryRequest) {
+    // The discovery feed and search both send the abtest opt-in header (per
+    // ultrazg/xyz handlers/discovery.go + handlers/search.go); other content
+    // endpoints work without it.
+    if (m_requestType == DiscoveryRequest || m_requestType == SearchRequest) {
         request.setRawHeader("abtest-info", "{\"old_user_discovery_feed\":\"enable\"}");
     }
 }
@@ -555,6 +576,13 @@ void XyzApiClient::onReplyFinished()
         m_commentsLoadMoreKey = top.value(QString::fromLatin1("loadMoreKey")).toMap();
         setBusy(false);
         emit commentsLoaded();
+        return;
+    }
+
+    if (type == SearchRequest) {
+        m_searchResults = shapeSearchEpisodes(root);
+        setBusy(false);
+        emit searchLoaded();
         return;
     }
 
@@ -1005,5 +1033,30 @@ QVariantMap XyzApiClient::shapeDiscoveryEpisode(const QVariantMap &episode) cons
     const int comments = episode.value(QString::fromLatin1("commentCount")).toInt();
     out.insert(QString::fromLatin1("commentCount"),
                comments > 99 ? QString::fromLatin1("99+") : QString::number(comments));
+    return out;
+}
+
+// Search returns a mixed feed (HEADER / PODCAST / EPISODE / FOOTER /
+// SEARCHED_USERS) under the top-level "data" array (same envelope as discovery /
+// inbox; we keep the data.data fallback in case the upstream ever double-wraps).
+// We keep only EPISODE entries; unlike the discovery feed, a search EPISODE entry
+// carries the episode fields at its own top level (type + eid + title + podcast{})
+// rather than under a target[].episode wrapper, so shape each entry directly.
+QVariantList XyzApiClient::shapeSearchEpisodes(const QVariant &root) const
+{
+    static const QString kEpisode = QString::fromLatin1("EPISODE");
+    QVariantList out;
+    const QVariantMap top = root.toMap();
+    const QVariant dataNode = top.value(QString::fromLatin1("data"));
+    QVariantList entries = dataNode.toList();
+    if (entries.isEmpty()) {
+        entries = dataNode.toMap().value(QString::fromLatin1("data")).toList();
+    }
+    for (int i = 0; i < entries.size(); ++i) {
+        const QVariantMap entry = entries.at(i).toMap();
+        if (entry.value(QString::fromLatin1("type")).toString() == kEpisode) {
+            out.append(shapeDiscoveryEpisode(entry));
+        }
+    }
     return out;
 }
