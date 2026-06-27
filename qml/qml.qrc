@@ -1,7 +1,6 @@
 <RCC>
     <qresource prefix="/qml">
         <file>AppWindow.qml</file>
-        <file>SelfTestPage.qml</file>
         <file>MemoryBar.qml</file>
         <file>XyzPageStackWindow.qml</file>
         <file>BelleHeader.qml</file>

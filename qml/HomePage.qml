@@ -16,7 +16,6 @@ Page {
     property string audioResetMsg: ""
 
     signal signedOut
-    signal selfTestRequested
     signal downloadsRequested
     signal tabSelected(int index)
     signal openPlayerRequested
@@ -229,34 +228,6 @@ Page {
                 id: signOutMouse
                 anchors.fill: parent
                 onClicked: page.signOut()
-            }
-        }
-
-        Item { width: 1; height: 8 }
-        // Dev affordance: jump to the subsystem self-test (incl. the player harness).
-        Rectangle {
-            width: parent.width
-            height: Theme.buttonHeight
-            radius: Theme.cornerRadius
-            border.width: 1
-            border.color: Theme.hairlineStrong
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: "#2a2a30" }
-                GradientStop { position: 1.0; color: "#1d1d22" }
-            }
-            opacity: selfTestMouse.pressed ? 0.8 : 1.0
-
-            Text {
-                anchors.centerIn: parent
-                text: qsTr("Self-test")
-                font.pixelSize: 16
-                font.bold: true
-                color: Theme.textDim
-            }
-            MouseArea {
-                id: selfTestMouse
-                anchors.fill: parent
-                onClicked: page.selfTestRequested()
             }
         }
 

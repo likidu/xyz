@@ -114,10 +114,6 @@ XyzPageStackWindow {
         visualParent: window
         MenuLayout {
             MenuItem {
-                text: qsTr("Self-test")
-                onClicked: { appMenu.close(); pageStack.push(selfTestPage); }
-            }
-            MenuItem {
                 text: qsTr("About")
                 onClicked: { appMenu.close(); window.showAbout(); }
             }
@@ -160,7 +156,6 @@ XyzPageStackWindow {
             pageStack.clear();
             pageStack.push(loginPage);
         }
-        onSelfTestRequested: pageStack.push(selfTestPage)
         onDownloadsRequested: pageStack.push(downloadsPage)
         onTabSelected: window.handleTab(index)
         onOpenPlayerRequested: window.openNowPlaying()
@@ -232,11 +227,6 @@ XyzPageStackWindow {
     NowPlayingPage {
         id: nowPlayingPage
         onOpenEpisodeRequested: window.openEpisodeForCurrent()
-    }
-
-    SelfTestPage {
-        id: selfTestPage
-        tools: toolBarLayout
     }
 
     Item {
