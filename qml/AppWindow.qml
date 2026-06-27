@@ -166,6 +166,20 @@ XyzPageStackWindow {
             pageStack.push(episodePage);
         }
         onOpenPlayerRequested: window.openNowPlaying()
+        onSearchRequested: {
+            if (!pageStack.busy && pageStack.currentPage !== searchPage) {
+                pageStack.push(searchPage);
+            }
+        }
+    }
+
+    SearchPage {
+        id: searchPage
+        onBackRequested: pageStack.pop()
+        onEpisodeRequested: {
+            episodePage.openWith(item);
+            pageStack.push(episodePage);
+        }
     }
 
     SubscriptionsPage {

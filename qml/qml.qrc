@@ -11,6 +11,8 @@
         <file>HomePage.qml</file>
         <file>UpdatesPage.qml</file>
         <file>DiscoveryPage.qml</file>
+        <file>EpisodeCard.qml</file>
+        <file>SearchPage.qml</file>
         <file>SubscriptionsPage.qml</file>
         <file>EpisodePage.qml</file>
         <file>DownloadsPage.qml</file>

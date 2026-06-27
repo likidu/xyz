@@ -14,6 +14,7 @@ Page {
     signal tabSelected(int index)
     signal episodeRequested(variant item)
     signal openPlayerRequested
+    signal searchRequested
 
     function load() {
         if (page.loadedOnce) {
@@ -52,12 +53,44 @@ Page {
         Text {
             anchors.left: parent.left
             anchors.leftMargin: 14
+            anchors.right: searchButton.left
             anchors.verticalCenter: parent.verticalCenter
             text: qsTr("Discover")
             font.pixelSize: 24
             font.bold: true
             color: Theme.text
+            elide: Text.ElideRight
         }
+
+        // search → push the Search page (design: screens-feed.jsx header action)
+        Item {
+            id: searchButton
+            width: 44
+            height: 44
+            anchors.right: parent.right
+            anchors.rightMargin: 6
+            anchors.verticalCenter: parent.verticalCenter
+
+            Rectangle {
+                anchors.fill: parent
+                radius: 4
+                color: Theme.accentDeep
+                opacity: searchMouse.pressed ? 0.4 : 0
+            }
+            Image {
+                source: "gfx/tab-search.svg"
+                width: 24
+                height: 24
+                smooth: true
+                anchors.centerIn: parent
+            }
+            MouseArea {
+                id: searchMouse
+                anchors.fill: parent
+                onClicked: page.searchRequested()
+            }
+        }
+
         Rectangle {
             anchors.left: parent.left
             anchors.right: parent.right
@@ -128,137 +161,10 @@ Page {
                     Repeater {
                         model: section.items
 
-                        Item {
+                        EpisodeCard {
                             width: sectionsColumn.width
-                            height: card.height + 10
-
-                            Rectangle {
-                                id: card
-                                anchors.top: parent.top
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.leftMargin: 10
-                                anchors.rightMargin: 10
-                                height: cardCol.height
-                                radius: 8
-                                border.width: 1
-                                border.color: Theme.hairline
-                                gradient: Gradient {
-                                    GradientStop { position: 0.0; color: Theme.panel2 }
-                                    GradientStop { position: 1.0; color: Theme.panel }
-                                }
-
-                                Column {
-                                    id: cardCol
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-
-                                    // card top: cover + show + title
-                                    Item {
-                                        width: parent.width
-                                        height: cardTop.height + 24
-                                        Row {
-                                            id: cardTop
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.leftMargin: 12
-                                            anchors.rightMargin: 12
-                                            anchors.top: parent.top
-                                            anchors.topMargin: 12
-                                            spacing: 12
-
-                                            Rectangle {
-                                                width: 76
-                                                height: 76
-                                                radius: 7
-                                                color: "#1a1a22"
-                                                clip: true
-                                                Image {
-                                                    anchors.fill: parent
-                                                    fillMode: Image.PreserveAspectCrop
-                                                    smooth: true
-                                                    sourceSize.width: 76
-                                                    sourceSize.height: 76
-                                                    source: modelData.coverUrl
-                                                }
-                                            }
-                                            Column {
-                                                width: parent.width - 88
-                                                spacing: 5
-                                                Text {
-                                                    width: parent.width
-                                                    text: modelData.showName
-                                                    font.pixelSize: 13
-                                                    color: Theme.accentBright
-                                                    elide: Text.ElideRight
-                                                }
-                                                Text {
-                                                    width: parent.width
-                                                    text: modelData.title
-                                                    font.pixelSize: 16
-                                                    font.bold: true
-                                                    color: Theme.text
-                                                    wrapMode: Text.WordWrap
-                                                    maximumLineCount: 3
-                                                    elide: Text.ElideRight
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    // card foot: duration · comments · when
-                                    Rectangle {
-                                        width: parent.width
-                                        height: 1
-                                        color: Theme.hairline
-                                    }
-                                    Item {
-                                        width: parent.width
-                                        height: 40
-                                        Row {
-                                            anchors.left: parent.left
-                                            anchors.leftMargin: 12
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            spacing: 14
-                                            Row {
-                                                spacing: 5
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                Image { source: "gfx/tab-headphones.svg"; width: 15; height: 15; smooth: true; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
-                                                Text { text: modelData.durationText; font.pixelSize: 13; color: Theme.textDim; anchors.verticalCenter: parent.verticalCenter }
-                                            }
-                                            Row {
-                                                spacing: 5
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                Image { source: "gfx/icon-comment.svg"; width: 15; height: 15; smooth: true; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
-                                                Text { text: modelData.commentCount; font.pixelSize: 13; color: Theme.textDim; anchors.verticalCenter: parent.verticalCenter }
-                                            }
-                                        }
-                                        Text {
-                                            anchors.right: parent.right
-                                            anchors.rightMargin: 12
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            text: modelData.whenText
-                                            font.pixelSize: 13
-                                            color: Theme.textFaint
-                                        }
-                                    }
-                                }
-                            }
-
-                            // press feedback (non-interactive wash) + single whole-card
-                            // tap target on top. Card content (Text/Image) never grabs the
-                            // mouse, so one MouseArea catches a tap anywhere on the card.
-                            Rectangle {
-                                anchors.fill: card
-                                radius: 8
-                                color: Theme.accent
-                                opacity: cardTap.pressed ? 0.10 : 0
-                            }
-                            MouseArea {
-                                id: cardTap
-                                anchors.fill: card
-                                onClicked: page.episodeRequested(modelData)
-                            }
+                            item: modelData
+                            onClicked: page.episodeRequested(modelData)
                         }
                     }
                 }
