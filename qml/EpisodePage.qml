@@ -13,6 +13,7 @@ Page {
 
     property bool hidesToolBar: true
     signal openPlayerRequested
+    signal podcastRequested(string pid)
 
     // ---- seeded from the tapped card ----
     property string eid: ""
@@ -33,6 +34,7 @@ Page {
 
     // ---- filled from the fetched detail ----
     property string showTitle: ""
+    property string showPid: ""
     property string notes: ""
     property string commentCountText: ""
     property variant commentModel: []
@@ -50,6 +52,7 @@ Page {
         page.audioUrl = "";
         page.audioSizeText = "";
         page.showTitle = "";
+        page.showPid = "";
         page.notes = "";
         page.commentCountText = "";
         page.commentModel = [];
@@ -103,6 +106,7 @@ Page {
         target: xyzApi
         onEpisodeLoaded: {
             page.showTitle = xyzApi.episode.showTitle;
+            page.showPid = xyzApi.episode.pid;
             page.notes = xyzApi.episode.notes;
             page.commentCountText = xyzApi.episode.commentCount;
             page.audioUrl = xyzApi.episode.audioUrl;
@@ -192,13 +196,30 @@ Page {
                     anchors.rightMargin: 14
                     spacing: 6
 
-                    Text {
+                    Row {
                         width: parent.width
-                        text: page.showTitle
                         visible: page.showTitle.length > 0
-                        font.pixelSize: 14
-                        color: Theme.accentBright
-                        elide: Text.ElideRight
+                        spacing: 3
+
+                        Text {
+                            text: page.showTitle
+                            font.pixelSize: 14
+                            color: Theme.accentBright
+                            elide: Text.ElideRight
+                            width: page.showPid !== "" ? Math.min(implicitWidth, parent.width - 16) : parent.width
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Image {
+                            source: "gfx/icon-chevron.svg"
+                            width: 14; height: 14; smooth: true
+                            visible: page.showPid !== ""
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            enabled: page.showPid !== ""
+                            onClicked: page.podcastRequested(page.showPid)
+                        }
                     }
                     Text {
                         width: parent.width

@@ -14,6 +14,7 @@ Page {
 
     signal tabSelected(int index)
     signal openPlayerRequested
+    signal podcastRequested(string pid, variant seed)
 
     function load() {
         if (page.loadedOnce) {
@@ -108,6 +109,11 @@ Page {
                         font.bold: true
                         color: Theme.accentBright
                     }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: page.podcastRequested(modelData.pid, modelData)
                 }
             }
         }
@@ -234,6 +240,11 @@ Page {
         Item {
             width: subsList.width
             height: 72
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: page.podcastRequested(modelData.pid, modelData)
+            }
 
             Row {
                 anchors.left: parent.left

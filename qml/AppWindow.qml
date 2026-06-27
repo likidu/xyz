@@ -172,10 +172,27 @@ XyzPageStackWindow {
         id: subscriptionsPage
         onTabSelected: window.handleTab(index)
         onOpenPlayerRequested: window.openNowPlaying()
+        onPodcastRequested: {
+            podcastPage.openWith(pid, seed);
+            pageStack.push(podcastPage);
+        }
     }
 
     EpisodePage {
         id: episodePage
+        onOpenPlayerRequested: window.openNowPlaying()
+        onPodcastRequested: {
+            podcastPage.openWith(pid, {"name": episodePage.showTitle, "coverUrl": episodePage.coverUrl});
+            pageStack.push(podcastPage);
+        }
+    }
+
+    PodcastPage {
+        id: podcastPage
+        onEpisodeRequested: {
+            episodePage.openWith(item);
+            pageStack.push(episodePage);
+        }
         onOpenPlayerRequested: window.openNowPlaying()
     }
 
