@@ -66,13 +66,38 @@ Page {
         color: Theme.bg
     }
 
-    BelleHeader {
+    // ---- glossy title bar (matches the Discover / Updates tab landings) ----
+    Rectangle {
         id: header
-        title: qsTr("Account")
-        showBack: false
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
+        height: 56
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Theme.chromeHi }
+            GradientStop { position: 0.06; color: "#232328" }
+            GradientStop { position: 0.6; color: "#1a1a1e" }
+            GradientStop { position: 1.0; color: Theme.chromeLo }
+        }
+        Text {
+            anchors.left: parent.left
+            anchors.leftMargin: 14
+            anchors.right: parent.right
+            anchors.rightMargin: 14
+            anchors.verticalCenter: parent.verticalCenter
+            text: qsTr("Account")
+            font.pixelSize: 24
+            font.bold: true
+            color: Theme.text
+            elide: Text.ElideRight
+        }
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: 1
+            color: "#000000"
+        }
     }
 
     // Account content scrolls — on the small nHD screen the profile + Downloads
