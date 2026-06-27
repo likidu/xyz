@@ -48,6 +48,7 @@ XyzApiClient::XyzApiClient(StorageManager *storage, QObject *parent)
     , m_replayType(NoneRequest)
     , m_replayIsPost(false)
     , m_refreshAttempted(false)
+    , m_podcastEpisodesTotal(0)
     , m_commentsTotal(0)
     , m_discPageCount(0)
     , m_discAnyOk(false)
@@ -62,6 +63,8 @@ QVariantList XyzApiClient::inboxItems() const { return m_inboxItems; }
 QVariantList XyzApiClient::subscriptions() const { return m_subscriptions; }
 QVariantMap XyzApiClient::episode() const { return m_episode; }
 QVariantMap XyzApiClient::podcast() const { return m_podcast; }
+QVariantList XyzApiClient::podcastEpisodes() const { return m_podcastEpisodes; }
+bool XyzApiClient::hasMorePodcastEpisodes() const { return !m_podcastEpisodesKey.isEmpty(); }
 QVariantList XyzApiClient::comments() const { return m_comments; }
 int XyzApiClient::commentsTotal() const { return m_commentsTotal; }
 bool XyzApiClient::hasMoreComments() const { return !m_commentsLoadMoreKey.isEmpty(); }
@@ -103,6 +106,37 @@ void XyzApiClient::fetchPodcast(const QString &pid)
     }
     startGet(PodcastRequest,
              QString::fromLatin1("/v1/podcast/get?pid=") + QString(QUrl::toPercentEncoding(pid)));
+}
+
+// Episodes for a show (first page). order=desc is newest-first; loadMoreKey is the
+// opaque cursor object {pubDate,id,direction} the API returns and we echo back.
+void XyzApiClient::fetchPodcastEpisodes(const QString &pid)
+{
+    if (pid.isEmpty()) {
+        return;
+    }
+    m_podcastEpisodesPid = pid;
+    m_podcastEpisodesKey.clear();
+    m_podcastEpisodesTotal = 0;
+
+    QVariantMap body;
+    body.insert(QString::fromLatin1("pid"), pid);
+    body.insert(QString::fromLatin1("order"), QString::fromLatin1("desc"));
+    body.insert(QString::fromLatin1("limit"), QString::fromLatin1("20"));
+    startPost(PodcastEpisodesRequest, QString::fromLatin1("/v1/episode/list"), body);
+}
+
+void XyzApiClient::loadMorePodcastEpisodes()
+{
+    if (m_busy || m_podcastEpisodesPid.isEmpty() || m_podcastEpisodesKey.isEmpty()) {
+        return;
+    }
+    QVariantMap body;
+    body.insert(QString::fromLatin1("pid"), m_podcastEpisodesPid);
+    body.insert(QString::fromLatin1("order"), QString::fromLatin1("desc"));
+    body.insert(QString::fromLatin1("limit"), QString::fromLatin1("20"));
+    body.insert(QString::fromLatin1("loadMoreKey"), m_podcastEpisodesKey);
+    startPost(MorePodcastEpisodesRequest, QString::fromLatin1("/v1/episode/list"), body);
 }
 
 // Top comments (first page). The official body wraps the eid in an owner object —
@@ -488,6 +522,26 @@ void XyzApiClient::onReplyFinished()
         return;
     }
 
+    if (type == PodcastEpisodesRequest || type == MorePodcastEpisodesRequest) {
+        QVariantList shaped;
+        for (int i = 0; i < rawItems.size(); ++i) {
+            shaped.append(shapePodcastEpisode(rawItems.at(i).toMap()));
+        }
+        if (type == MorePodcastEpisodesRequest) {
+            m_podcastEpisodes += shaped;   // append the next page
+        } else {
+            m_podcastEpisodes = shaped;    // first page replaces
+        }
+        if (top.contains(QString::fromLatin1("total"))) {
+            m_podcastEpisodesTotal = top.value(QString::fromLatin1("total")).toInt();
+        }
+        // loadMoreKey is absent on the last page → empty map → hasMore false.
+        m_podcastEpisodesKey = top.value(QString::fromLatin1("loadMoreKey")).toMap();
+        setBusy(false);
+        emit podcastEpisodesLoaded();
+        return;
+    }
+
     if (type == CommentsRequest || type == MoreCommentsRequest) {
         QVariantList shaped;
         for (int i = 0; i < rawItems.size(); ++i) {
@@ -741,6 +795,27 @@ QVariantMap XyzApiClient::shapePodcast(const QVariantMap &item) const
     out.insert(QString::fromLatin1("isSubscribed"),
                item.value(QString::fromLatin1("subscriptionStatus")).toString()
                    == QLatin1String("ON"));
+    return out;
+}
+
+QVariantMap XyzApiClient::shapePodcastEpisode(const QVariantMap &item) const
+{
+    QVariantMap out;
+    out.insert(QString::fromLatin1("eid"), item.value(QString::fromLatin1("eid")).toString());
+    out.insert(QString::fromLatin1("coverUrl"),
+               pickImageUrl(item.value(QString::fromLatin1("image")).toMap()));
+    out.insert(QString::fromLatin1("title"), item.value(QString::fromLatin1("title")).toString());
+    out.insert(QString::fromLatin1("desc"), item.value(QString::fromLatin1("description")).toString());
+
+    const int durationSec = item.value(QString::fromLatin1("duration")).toInt();
+    out.insert(QString::fromLatin1("durationText"),
+               QString::fromLatin1("%1 min").arg((durationSec + 30) / 60));
+    out.insert(QString::fromLatin1("whenText"),
+               relativeTime(item.value(QString::fromLatin1("pubDate")).toString()));
+    out.insert(QString::fromLatin1("plays"),
+               QString::number(item.value(QString::fromLatin1("playCount")).toInt()));
+    out.insert(QString::fromLatin1("cmt"),
+               QString::number(item.value(QString::fromLatin1("commentCount")).toInt()));
     return out;
 }
 
