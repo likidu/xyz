@@ -37,7 +37,6 @@ Page {
     property string showPid: ""
     property string notes: ""
     property string commentCountText: ""
-    property variant commentModel: []
     property bool detailLoaded: false
     property bool loadingMoreComments: false
 
@@ -55,7 +54,7 @@ Page {
         page.showPid = "";
         page.notes = "";
         page.commentCountText = "";
-        page.commentModel = [];
+        commentModel.clear();
         page.detailLoaded = false;
         page.loadingMoreComments = false;
         page.downloaded = false;
@@ -115,7 +114,13 @@ Page {
             xyzApi.fetchComments(page.eid);
         }
         onCommentsLoaded: {
-            page.commentModel = xyzApi.comments;
+            // xyzApi.comments is the full accumulated list. Append only the rows
+            // we don't have yet so existing delegates — and the Flickable's
+            // scroll position — stay put when loading the next page.
+            var all = xyzApi.comments;
+            for (var i = commentModel.count; i < all.length; ++i) {
+                commentModel.append(all[i]);
+            }
         }
         // Clear the "loading more" spinner on any request completion — success emits
         // commentsLoaded, but an error/timeout only flips busy back to false.
@@ -133,6 +138,12 @@ Page {
     }
 
     Rectangle { anchors.fill: parent; color: Theme.bg }
+
+    // Comments accumulate here; "Load more" appends only the newly fetched page
+    // (see onCommentsLoaded). Reassigning a whole array model instead would
+    // rebuild every delegate, collapse contentHeight mid-teardown and snap the
+    // Flickable back to the top — the bug this avoids.
+    ListModel { id: commentModel }
 
     BelleHeader {
         id: header
@@ -469,7 +480,7 @@ Page {
 
             // ---- comment rows ----
             Repeater {
-                model: page.commentModel
+                model: commentModel
 
                 Item {
                     width: contentCol.width
@@ -497,13 +508,13 @@ Page {
                                 smooth: true
                                 sourceSize.width: 36
                                 sourceSize.height: 36
-                                source: modelData.avatarUrl
-                                visible: modelData.avatarUrl !== ""
+                                source: model.avatarUrl
+                                visible: model.avatarUrl !== ""
                             }
                             Text {
-                                visible: modelData.avatarUrl === ""
+                                visible: model.avatarUrl === ""
                                 anchors.centerIn: parent
-                                text: modelData.name.charAt(0)
+                                text: model.name.charAt(0)
                                 font.pixelSize: 16
                                 font.bold: true
                                 color: "#ffffff"
@@ -517,14 +528,14 @@ Page {
 
                             Text {
                                 width: parent.width
-                                text: modelData.loc.length > 0 ? modelData.name + "  ·  " + modelData.loc : modelData.name
+                                text: model.loc.length > 0 ? model.name + "  ·  " + model.loc : model.name
                                 font.pixelSize: 14
                                 color: Theme.textDim
                                 elide: Text.ElideRight
                             }
                             Text {
                                 width: parent.width
-                                text: modelData.text
+                                text: model.text
                                 font.pixelSize: 16
                                 lineHeight: 1.55
                                 color: Theme.text
@@ -543,7 +554,7 @@ Page {
                                 anchors.horizontalCenter: parent.horizontalCenter
                             }
                             Text {
-                                text: modelData.likes
+                                text: model.likes
                                 font.pixelSize: 12
                                 color: Theme.textFaint
                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -565,7 +576,7 @@ Page {
             Item {
                 id: loadMoreWrap
                 width: contentCol.width
-                visible: page.detailLoaded && page.commentModel.length > 0
+                visible: page.detailLoaded && commentModel.count > 0
                 height: visible ? 58 : 0
 
                 // (a) idle → "Load more" + showing-count
@@ -580,7 +591,7 @@ Page {
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: qsTr("Showing %1 of %2").arg(page.commentModel.length).arg(xyzApi.commentsTotal)
+                        text: qsTr("Showing %1 of %2").arg(commentModel.count).arg(xyzApi.commentsTotal)
                         font.pixelSize: 12; color: Theme.textDim
                     }
                 }
@@ -599,7 +610,7 @@ Page {
                         spacing: 3; anchors.verticalCenter: parent.verticalCenter
                         Text { text: qsTr("Loading more…"); font.pixelSize: 15; color: Theme.text }
                         Text {
-                            text: qsTr("Showing %1 of %2").arg(page.commentModel.length).arg(xyzApi.commentsTotal)
+                            text: qsTr("Showing %1 of %2").arg(commentModel.count).arg(xyzApi.commentsTotal)
                             font.pixelSize: 12; color: Theme.textDim
                         }
                     }

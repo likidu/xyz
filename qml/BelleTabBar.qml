@@ -25,17 +25,6 @@ Rectangle {
         color: "#000000"
     }
 
-    // Belle 'expand options' grab handle (decorative)
-    Rectangle {
-        width: 46
-        height: 4
-        radius: 2
-        color: "#3a3a42"
-        anchors.top: parent.top
-        anchors.topMargin: 4
-        anchors.horizontalCenter: parent.horizontalCenter
-    }
-
     Row {
         anchors.fill: parent
 
