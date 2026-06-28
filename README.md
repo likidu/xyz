@@ -58,6 +58,18 @@ hard-won device gotchas.
 > On-device behaviour can't be verified from CI (the legacy toolchain isn't
 > hostable on hosted runners). Always smoke-test the self-test page on hardware.
 
+## Notifications (Pigler)
+
+The now-playing notification uses the **Pigler Notifications API (PNA)**, a
+separate on-device service. To see notifications, install it on the phone:
+
+1. Download and install **`Pigler.sis`** from <https://nnproject.cc/pna/>.
+2. Reboot the phone.
+
+Without Pigler installed the app runs normally — you just won't get the
+status-panel notification. Tapping the notification opens the app at the
+currently playing episode. The notification icon is currently a placeholder.
+
 ## License
 MIT — see `LICENSE`.
 
