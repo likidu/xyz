@@ -62,12 +62,12 @@ void NowPlayingNotifier::refresh()
     if (!m_available)
         return;
 
-    const QString eid   = m_player->currentEid();
-    const QString title = m_player->currentTitle();
-    const QString show  = m_player->currentShow();
+    const int state = m_player->state();
+    const bool active = (state == m_player->playingState()
+                         || state == m_player->pausedState());
 
-    if (eid.isEmpty()) {
-        // Stopped / idle -> clear the notification.
+    if (!active) {
+        // Not in a playback session (idle/stopped/downloading/error) -> clear.
         if (m_notifId >= 0) {
             m_api->removeNotification(m_notifId);
             m_notifId = -1;
@@ -75,6 +75,9 @@ void NowPlayingNotifier::refresh()
         }
         return;
     }
+
+    const QString title = m_player->currentTitle();
+    const QString show  = m_player->currentShow();
 
     if (m_notifId < 0) {
         m_notifId = m_api->createNotification(title, show);
