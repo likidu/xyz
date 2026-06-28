@@ -8,7 +8,9 @@ XyzPageStackWindow {
     platformSoftwareInputPanelEnabled: true
 
     function handleBack() {
-        if (pageStack.depth <= 1) {
+        if (pageStack.currentPage === nowPlayingPage) {
+            nowPlayingPage.collapse();   // vertical slide down, then pops
+        } else if (pageStack.depth <= 1) {
             Qt.quit();
         } else {
             pageStack.pop();
@@ -21,7 +23,10 @@ XyzPageStackWindow {
 
     function openNowPlaying() {
         if (!pageStack.busy && pageStack.currentPage !== nowPlayingPage) {
-            pageStack.push(nowPlayingPage);
+            // Immediate push suppresses the stack's horizontal slide; the page
+            // runs its own vertical animation so it expands up from the mini player.
+            pageStack.push(nowPlayingPage, null, true);
+            nowPlayingPage.expand();
         }
     }
 
