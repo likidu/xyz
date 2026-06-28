@@ -50,9 +50,18 @@ Rectangle {
         }
     }
 
+    // Expand affordance — mirrors the down-chevron on the Now Playing page.
+    Image {
+        id: expandChevron
+        source: "gfx/icon-chevron-up.svg"
+        width: 24; height: 24; smooth: true
+        anchors.right: parent.right; anchors.rightMargin: 12
+        anchors.verticalCenter: parent.verticalCenter
+    }
+
     Column {
         anchors.left: cover.right; anchors.leftMargin: 11
-        anchors.right: parent.right; anchors.rightMargin: 12
+        anchors.right: expandChevron.left; anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter
         spacing: 2
         Text {
