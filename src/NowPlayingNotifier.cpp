@@ -86,6 +86,10 @@ void NowPlayingNotifier::refresh()
             return;
         }
         m_api->setLaunchAppOnTap(m_notifId, true);
+        // A tap should foreground the app, NOT dismiss the notification: it is a
+        // now-playing indicator that must persist until playback stops. Pigler's
+        // server default is remove-on-tap, so override it explicitly.
+        m_api->setRemoveOnTap(m_notifId, false);
         applyIcon();
     } else {
         m_api->updateNotification(m_notifId, title, show);

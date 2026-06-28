@@ -3,6 +3,33 @@ Symbian Belle Device Notes
 
 Hardware: Nokia C7 (Belle FP2)
 
+## 2026-06-27 — Pigler now-playing notification: tap dismissed it (server default is remove-on-tap)
+
+**Feature:** now-playing notification via the Pigler Notifications API (PNA), driven by
+`NowPlayingNotifier` (state-keyed: shown while `Playing`/`Paused`, removed on stop/close).
+Requires the user-installed `Pigler.sis` server (nnproject.cc/pna).
+
+**Device test (first run, Pigler.sis installed):** notification **pops up** correctly with the
+episode title/show, and tapping it **does foreground the app** (so `setLaunchAppOnTap(true)`
+works). **Bug:** the tap also **dismissed the notification even though the episode kept
+playing** — it stayed gone (no recreate) until the next play/pause transition.
+
+**Root cause:** Pigler's server creates a notification with `removeOnTap` defaulting to **true**
+(standard notification-center behaviour). `PiglerAPI::SetNotification` (our create path) only
+sends the text — it does not set `removeOnTap` — so we inherited the server default. Our client
+never called `setRemoveOnTap`. A tap therefore told the server to delete the item; foregrounding
+the app triggers no playback-state change, so `NowPlayingNotifier::refresh()` is never re-invoked
+and the notification is not recreated while playback continues.
+
+**Fix:** in `NowPlayingNotifier::refresh()`, immediately after `setLaunchAppOnTap(m_notifId, true)`
+on the create path, also call `m_api->setRemoveOnTap(m_notifId, false)`. The notification now
+persists across a tap and is removed only when playback leaves `Playing`/`Paused` (stop/idle) or
+the app closes.
+
+**Status:** compiles for `armv5 udeb` (RVCT 4.0) cleanly ("no warnings or errors"). **Pending
+on-device re-confirmation:** after the fix, tapping should foreground + open the episode page
+while the notification **remains** until Stop, then disappears.
+
 ## 2026-06-27 — Side volume keys needed "warm-up" presses: RemCon target registered before foreground
 
 **Symptom (device):** the side volume rocker controls playback volume (see 2026-06-22), but
