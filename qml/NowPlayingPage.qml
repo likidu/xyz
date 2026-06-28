@@ -45,6 +45,46 @@ Page {
         return v;
     }
 
+    // Vertical expand/collapse (driven from AppWindow.openNowPlaying / handleBack):
+    // the whole sheet slides between fully shown (slideOffset 0) and just off the
+    // bottom (slideOffset = height), so it grows up from / shrinks down to the mini
+    // player instead of the page stack's default horizontal slide.
+    property real slideOffset: height
+
+    function expand() {
+        collapseAnim.stop();
+        slideOffset = page.height;   // start off the bottom
+        expandAnim.restart();        // ...then slide up
+    }
+    function collapse() {
+        if (collapseAnim.running) return;
+        expandAnim.stop();
+        collapseAnim.restart();      // slide down, then pop (see ScriptAction)
+    }
+
+    NumberAnimation {
+        id: expandAnim
+        target: page; property: "slideOffset"; to: 0
+        duration: 240; easing.type: Easing.OutCubic
+    }
+    SequentialAnimation {
+        id: collapseAnim
+        NumberAnimation {
+            target: page; property: "slideOffset"; to: page.height
+            duration: 220; easing.type: Easing.InCubic
+        }
+        // Pop one page immediately (no horizontal slide). pop(null,...) would
+        // unwind to the root, so pass undefined to pop exactly one.
+        ScriptAction { script: pageStack.pop(undefined, true); }
+    }
+
+    // The visible sheet — animating its y performs the vertical slide.
+    Item {
+        id: body
+        width: parent.width
+        height: parent.height
+        y: page.slideOffset
+
     Rectangle { anchors.fill: parent; color: Theme.bg }
 
     BelleHeader {
@@ -54,7 +94,7 @@ Page {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        onBackClicked: pageStack.pop()
+        onBackClicked: page.collapse()
     }
 
     // ---- player body ----
@@ -241,5 +281,6 @@ Page {
                 }
             }
         }
+    }
     }
 }
