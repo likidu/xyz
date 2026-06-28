@@ -52,6 +52,19 @@ symbian {
     emptyfile.sources = data/.placeholder
     emptyfile.path = /private/e7b5c0de
     DEPLOYMENT += emptyfile
+
+    # Pigler Notifications API (vendored from github.com/piglerorg/pigler).
+    # Status-panel notifications via the user-installed Pigler.sis server.
+    DEFINES += PIGLER_API_ANNA_RECONNECT
+    INCLUDEPATH += src/pigler
+    LIBS += -lrandom -laknnotify
+    SOURCES += src/pigler/QPiglerAPI.cpp \
+               src/pigler/PiglerAPI.cpp \
+               src/pigler/PiglerTapServer.cpp
+    HEADERS += src/pigler/QPiglerAPI.h \
+               src/pigler/PiglerAPI.h \
+               src/pigler/PiglerTapServer.h \
+               src/pigler/PiglerProtocol.h
 }
 
 SOURCES += \
