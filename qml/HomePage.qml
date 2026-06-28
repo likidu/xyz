@@ -291,6 +291,14 @@ Page {
             color: Theme.accentBright
             anchors.horizontalCenter: parent.horizontalCenter
         }
+
+        Item { width: 1; height: 10 }
+        Text {
+            text: qsTr("Version %1").arg(appVersion)
+            font.pixelSize: 12
+            color: Theme.textFaint
+            anchors.horizontalCenter: parent.horizontalCenter
+        }
         }
     }
 
