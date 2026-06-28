@@ -101,6 +101,13 @@ XyzPageStackWindow {
         }
     }
 
+    // A tap on the Pigler now-playing notification opens the current
+    // episode's detail page (Pigler has already foregrounded the app).
+    Connections {
+        target: notifier
+        onOpenCurrentEpisodeRequested: openEpisodeForCurrent()
+    }
+
     LoginPage {
         id: loginPage
         onCodeSent: {
