@@ -77,7 +77,8 @@ SOURCES += \
     src/XyzApiClient.cpp \
     src/EpisodeDownloader.cpp \
     src/PlayerController.cpp \
-    src/DownloadRegistry.cpp
+    src/DownloadRegistry.cpp \
+    src/NowPlayingNotifier.cpp
 
 HEADERS += \
     src/MemoryMonitor.h \
@@ -89,7 +90,8 @@ HEADERS += \
     src/XyzApiClient.h \
     src/EpisodeDownloader.h \
     src/PlayerController.h \
-    src/DownloadRegistry.h
+    src/DownloadRegistry.h \
+    src/NowPlayingNotifier.h
 
 RESOURCES += \
     qml/qml.qrc

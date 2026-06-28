@@ -32,6 +32,7 @@
 #include "XyzApiClient.h"
 #include "PlayerController.h"
 #include "DownloadRegistry.h"
+#include "NowPlayingNotifier.h"
 #ifdef Q_OS_SYMBIAN
 #include "VolumeKeyCapturer.h"
 #endif
@@ -419,6 +420,7 @@ int main(int argc, char *argv[])
     AuthClient authClient(&storage);
     XyzApiClient xyzApiClient(&storage);
     DownloadRegistry downloads(&storage, &player);
+    NowPlayingNotifier notifier(&player);
 
     QDeclarativeView view;
     view.rootContext()->setContextProperty("storage", &storage);
@@ -435,6 +437,7 @@ int main(int argc, char *argv[])
     view.rootContext()->setContextProperty("auth", &authClient);
     view.rootContext()->setContextProperty("xyzApi", &xyzApiClient);
     view.rootContext()->setContextProperty("downloads", &downloads);
+    view.rootContext()->setContextProperty("notifier", &notifier);
     static SslIgnoringNamFactory namFactory;
     view.engine()->setNetworkAccessManagerFactory(&namFactory);
     applyImportPaths(view.engine());
@@ -460,6 +463,9 @@ int main(int argc, char *argv[])
     TRAPD(vkErr, volumeKeys = VolumeKeyCapturer::NewL(&audioEngine));
     if (vkErr != KErrNone)
         qWarning("VolumeKeyCapturer init failed: %d (volume keys disabled)", vkErr);
+    // Pigler notifications register after the window is foreground (same reason
+    // as VolumeKeyCapturer above: needs the app focused / scheduler running).
+    notifier.init();
 #endif
 
     const int rc = app.exec();
