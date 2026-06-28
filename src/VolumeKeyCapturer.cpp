@@ -2,6 +2,8 @@
 
 #ifdef Q_OS_SYMBIAN
 
+#include <QtCore/QDebug>
+
 #include "AudioEngine.h"
 
 VolumeKeyCapturer::VolumeKeyCapturer(AudioEngine* aEngine)
@@ -33,6 +35,10 @@ VolumeKeyCapturer::~VolumeKeyCapturer()
 void VolumeKeyCapturer::MrccatoCommand(TRemConCoreApiOperationId aOperationId,
                                        TRemConCoreApiButtonAction aButtonAct)
 {
+    // Diagnostic: confirms (via xyz.log) that the RemCon target receives rocker
+    // commands from the very first press — i.e. routing is no longer warming up.
+    qDebug("VolumeKeyCapturer: command op=%d action=%d", (int)aOperationId, (int)aButtonAct);
+
     // Act once per press/click; ignore the matching release so a single tap = one step.
     if (aButtonAct == ERemConCoreApiButtonRelease)
         return;

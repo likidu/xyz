@@ -415,12 +415,6 @@ int main(int argc, char *argv[])
     MemoryMonitor memoryMonitor;
     TlsChecker tlsChecker;
     AudioEngine audioEngine;
-#ifdef Q_OS_SYMBIAN
-    VolumeKeyCapturer *volumeKeys = 0;
-    TRAPD(vkErr, volumeKeys = VolumeKeyCapturer::NewL(&audioEngine));
-    if (vkErr != KErrNone)
-        qWarning("VolumeKeyCapturer init failed: %d (volume keys disabled)", vkErr);
-#endif
     PlayerController player(&audioEngine);
     AuthClient authClient(&storage);
     XyzApiClient xyzApiClient(&storage);
@@ -453,6 +447,21 @@ int main(int argc, char *argv[])
     view.resize(360, 640);
 
     view.show();
+
+#ifdef Q_OS_SYMBIAN
+    // Register the side-volume-key (RemCon) target only AFTER the window is shown
+    // and foreground. Symbian's RemCon routing (TSP) delivers the rocker keys to
+    // the foreground app, so registering before show() lets the first presses
+    // route elsewhere until focus re-resolves to us — the "tap a few times before
+    // it works" symptom. processEvents() lets the window-server foreground event
+    // through before we OpenTargetL().
+    QApplication::processEvents();
+    VolumeKeyCapturer *volumeKeys = 0;
+    TRAPD(vkErr, volumeKeys = VolumeKeyCapturer::NewL(&audioEngine));
+    if (vkErr != KErrNone)
+        qWarning("VolumeKeyCapturer init failed: %d (volume keys disabled)", vkErr);
+#endif
+
     const int rc = app.exec();
 #ifdef Q_OS_SYMBIAN
     delete volumeKeys;   // before audioEngine goes out of scope

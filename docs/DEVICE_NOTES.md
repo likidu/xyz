@@ -3,6 +3,40 @@ Symbian Belle Device Notes
 
 Hardware: Nokia C7 (Belle FP2)
 
+## 2026-06-27 — Side volume keys needed "warm-up" presses: RemCon target registered before foreground
+
+**Symptom (device):** the side volume rocker controls playback volume (see 2026-06-22), but
+on a fresh launch the **first few presses do nothing — both up AND down** — then it suddenly
+starts working and is fine for the rest of the session.
+
+**Root cause:** `VolumeKeyCapturer::NewL()` (which calls `CRemConInterfaceSelector::OpenTargetL()`)
+ran in `main()` **before `view.show()`**, i.e. before the app had a foreground window group.
+Symbian's RemCon routing (the Target Selector Plugin) delivers the rocker's media keys to the
+**foreground app's** registered target; registering before the window is foreground means the
+TSP doesn't route the keys to us until focus re-resolves — which only happens after the first
+press(es). Both directions being dead (not just up) is what distinguishes this from the
+unrelated quirk below. The Qt Wiki RemCon sample has the same early-registration shape and
+doesn't address it.
+
+**Fix:** moved the `#ifdef Q_OS_SYMBIAN` `VolumeKeyCapturer::NewL(&audioEngine)` block in
+`src/main.cpp` to **after `view.show()`**, preceded by `QApplication::processEvents()` so the
+window-server foreground event is delivered before we `OpenTargetL()`. Added a `qDebug` in
+`MrccatoCommand` so `xyz.log` shows `VolumeKeyCapturer: command op=.. action=..` — use it to
+confirm commands now arrive **from the first press**.
+
+**Status:** compiles for `armv5 udeb` (RVCT 4.0) cleanly; **pending on-device confirmation** on
+the X7-00. To verify: fresh launch, start playback, press the rocker once, check `xyz.log` for
+the command line on the very first press (volume should also step). If warm-up persists, the
+log will show whether `MrccatoCommand` fires during the dead presses — if it still doesn't,
+the next step is to defer registration to a `QTimer::singleShot(0, …)` after the event loop
+starts rather than just `processEvents()`.
+
+**Separate latent quirk (not this bug):** `AudioEngine` starts `m_volume = 1.0` (max) and
+`setVolume()` early-returns when unchanged, so on a fresh start **Volume Up is a no-op until
+you've pressed Down once**. There is no QML volume UI, so the rocker is the only control.
+Left as-is (changing the default startup loudness is a UX call); flagged in case it confuses
+verification — test with Volume Down, or rely on the `xyz.log` line which logs regardless.
+
 ## 2026-06-26 — Discovery: real feed is a loadMoreKey walk with several entry types
 
 **Symptom (device, after the nesting fix below):** only one section (an editor-pick
