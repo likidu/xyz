@@ -47,6 +47,7 @@
         <file>gfx/icon-pause-white.svg</file>
         <file>gfx/icon-rewind.svg</file>
         <file>gfx/icon-forward.svg</file>
+        <file>gfx/notif-icon.png</file>
         <file>sfx/test-tone.wav</file>
     </qresource>
 </RCC>
