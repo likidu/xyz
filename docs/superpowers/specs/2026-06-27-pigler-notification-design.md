@@ -56,9 +56,11 @@ Symbian event loop (Qt installs a `CActiveScheduler`).
    owning the `QPiglerAPI` and observing `player`. Keeps all Pigler/Symbian specifics
    behind one boundary, consistent with the existing manager pattern
    (`audioEngine`, `player`, `tlsChecker`, `VolumeKeyCapturer`).
-3. **Lifecycle: visible while an episode is loaded.** Appears when playback starts,
-   persists through pause, removed on stop and on app close. Keyed on
-   "episode loaded" (`player.currentEid != ""` / state back to `Idle`), not play/pause.
+3. **Lifecycle: visible while playing or paused.** Appears when playback starts,
+   persists through pause, removed on stop and on app close. Keyed on **playback state**
+   (`state == Playing || Paused`) — not on `currentEid`, because `stop()` leaves
+   `currentEid` set and the download-only path also sets it. (Implementation refined
+   from an initial `currentEid` key during review; see the behaviour table below.)
 4. **Content: line 1 = episode title, line 2 = show name.** Maps to
    `player.currentTitle` and `player.currentShow`.
 
@@ -113,14 +115,20 @@ private:
 };
 ```
 
-Behaviour table (driven by `refresh()`, connected to the four player signals):
+Behaviour table (driven by `refresh()`, connected to the player's `stateChanged`,
+`currentTitleChanged`, `currentShowChanged`, `currentEidChanged` signals). The
+notification is keyed on **playback state** — `active = state == Playing || Paused` —
+NOT on `currentEid`: `PlayerController::stop()` leaves `currentEid` set, and the
+download-only path also sets `currentEid`, so an eid key would both linger after stop
+and surface for episodes that are only downloading. `Playing || Paused` is exactly the
+"appears when playback starts, persists through pause, removed on stop" requirement.
 
 | Player state | Action |
 | --- | --- |
-| `currentEid` becomes non-empty (episode loaded) | If `m_notifId < 0`: `createNotification(title, show)`, set placeholder icon, `setLaunchAppOnTap(id, true)`. Else `updateNotification(m_notifId, title, show)`. |
-| `currentTitle` / `currentShow` change (same episode) | `updateNotification(m_notifId, title, show)`. |
-| State returns to `Idle` / `currentEid` empties (stop) | `removeNotification(m_notifId)`; `m_notifId = -1`. |
-| Pause / resume | No change — notification stays (lifecycle decision 3). |
+| Enters `Playing` or `Paused` (playback session active) | If `m_notifId < 0`: `createNotification(title, show)`, set placeholder icon once, `setLaunchAppOnTap(id, true)`. Else `updateNotification(m_notifId, title, show)`. |
+| `currentTitle` / `currentShow` change while active | `updateNotification(m_notifId, title, show)`. |
+| Leaves `Playing`/`Paused` (stop → `Idle`, error, or downloading) | `removeNotification(m_notifId)`; `m_notifId = -1`; `m_iconSet = false`. |
+| Pause ⇄ resume | Notification stays (both `Paused` and `Playing` are active). |
 | Destruction (app close) | `removeNotification`, `api.close()`. |
 
 Every action is a no-op when `!m_available`. `init()` checks the `init()` return code
@@ -240,7 +248,7 @@ the phone. Without it the app still works, just without notifications.
 
 - Exact transitive file/header set of the vendored Pigler sources (e.g. a separate
   `IPiglerTapHandler.h`) — resolved by downloading from the repo and compiling.
-- Whether `PlayerController::stop()` clears `currentEid` or only resets state — the
-  `refresh()` logic listens to both `currentEidChanged` and `stateChanged` so removal
-  fires regardless; confirm during implementation.
+- ~~Whether `PlayerController::stop()` clears `currentEid`~~ — RESOLVED: it does not
+  (only sets `Idle`), and the download-only path also sets `currentEid`. `refresh()` is
+  therefore keyed on `state == Playing || Paused`, not on `currentEid`.
 - `init()` timing vs. foreground (mirror `VolumeKeyCapturer`'s post-`show()` placement).
