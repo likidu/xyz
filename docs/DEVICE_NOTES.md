@@ -26,9 +26,9 @@ on the create path, also call `m_api->setRemoveOnTap(m_notifId, false)`. The not
 persists across a tap and is removed only when playback leaves `Playing`/`Paused` (stop/idle) or
 the app closes.
 
-**Status:** compiles for `armv5 udeb` (RVCT 4.0) cleanly ("no warnings or errors"). **Pending
-on-device re-confirmation:** after the fix, tapping should foreground + open the episode page
-while the notification **remains** until Stop, then disappears.
+**Status:** **Confirmed fixed on device (2026-06-27).** After the fix, tapping the notification
+foregrounds the app and opens the episode page, and the notification **persists** while playback
+continues; it is removed on Stop as expected. Builds `armv5 udeb` (RVCT 4.0) cleanly.
 
 ## 2026-06-27 — Side volume keys needed "warm-up" presses: RemCon target registered before foreground
 
