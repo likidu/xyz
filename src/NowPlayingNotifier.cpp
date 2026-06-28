@@ -104,9 +104,9 @@ void NowPlayingNotifier::applyIcon()
         m_iconSet = true;
     }
 }
+#endif
 
 void NowPlayingNotifier::onTap(qint32 /*notificationId*/)
 {
     emit openCurrentEpisodeRequested();
 }
-#endif

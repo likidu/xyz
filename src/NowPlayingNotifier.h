@@ -32,9 +32,7 @@ signals:
 
 private slots:
     void refresh();   // reconcile the notification with current player state
-#ifdef Q_OS_SYMBIAN
     void onTap(qint32 notificationId);
-#endif
 
 private:
     PlayerController *m_player;
